@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste API Loteria IA</title>
+</head>
+<body>
+    <h1>🚀 Teste da API</h1>
+    <button onclick="testar()">Gerar Jogos</button>
+    <pre id="resultado" style="background: #f4f4f4; padding: 10px; margin-top: 10px;"></pre>
+
+    <script>
+        async function testar() {
+            const url = 'https://loterias-ia-core-production.up.railway.app/api/generate';
+            const body = {
+                lotteryType: 'megasena',
+                count: 2,
+                method: 'frequency'
+            };
+
+            try {
+                const resposta = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': 'loterias-ia-2024-segura'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const dados = await resposta.json();
+                document.getElementById('resultado').textContent = JSON.stringify(dados, null, 2);
+            } catch (erro) {
+                document.getElementById('resultado').textContent = '❌ Erro: ' + erro.message;
+            }
+        }
+    </script>
+</body>
+</html>
