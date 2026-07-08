@@ -20,14 +20,15 @@ const PORT = process.env.PORT || 3000;
 // Helmet para segurança de cabeçalhos
 app.use(helmet());
 
-// CORS configurável
+// CORS configurável - CORRIGIDO PARA O RAILWAY
 const corsOptions = {
-  origin: process.env.ALLOWED_ORIGINS ? 
-    process.env.ALLOWED_ORIGINS.split(',') : 
-    ['http://localhost:3000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
-  credentials: true
+  origin: process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',') 
+    : '*', // ← ALTERADO: padrão libera todas as origens
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
@@ -53,8 +54,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ============================================
 app.use((req, res, next) => {
   console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.path}`);
-  console.log(`   IP: ${req.ip}`);
-  console.log(`   User-Agent: ${req.get('user-agent')}`);
+  if (req.method !== 'GET') {
+    console.log(`   Body:`, req.body);
+  }
   next();
 });
 
@@ -70,10 +72,11 @@ app.get('/health', (req, res) => {
     service: 'Loteria IA Core',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
+// Rota principal
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -81,8 +84,10 @@ app.get('/', (req, res) => {
     endpoints: {
       generate: '/api/generate',
       analyze: '/api/analyze',
-      predict: '/api/predict'
-    }
+      predict: '/api/predict',
+      health: '/health'
+    },
+    documentation: 'https://github.com/seu-usuario/loterias-ia-core'
   });
 });
 
@@ -100,7 +105,8 @@ app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: 'Rota não encontrada',
-    path: req.path
+    path: req.path,
+    availableEndpoints: ['/health', '/', '/api/generate', '/api/analyze', '/api/predict']
   });
 });
 
@@ -119,6 +125,7 @@ app.use((err, req, res, next) => {
 // ============================================
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📍 Ambiente: ${process.env.NODE_ENV}`);
+  console.log(`📍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health: http://localhost:${PORT}/health`);
+  console.log(`🔗 Público: https://loterias-ia-core-production.up.railway.app`);
 });
