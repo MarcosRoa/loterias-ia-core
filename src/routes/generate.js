@@ -1,4 +1,4 @@
-src/routes/generate.js
+//src/routes/generate.js
 
 const express = require('express');
 const router = express.Router();
