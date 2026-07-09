@@ -1,6 +1,34 @@
+# Dependências
 node_modules/
+package-lock.json
+yarn.lock
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Ambiente
 .env
 .env.local
+.env.production
+
+# Logs
 logs/
 *.log
+npm-debug.log*
+
+# Dados
+data/*.db
+data/*.json
+!data/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema
 .DS_Store
+Thumbs.db
