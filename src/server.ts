@@ -1,9 +1,4 @@
-
----
-
-## 📄 ARQUIVO 7: `src/server.ts`
-
-**Caminho:** `/src/server.ts`
+//src/server.ts`
 
 ```typescript
 import express from 'express';
