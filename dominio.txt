@@ -1,1 +1,45 @@
 loterias-ia-core-production.up.railway.app
+
+
+📁 loterias-ia-core/
+├── 📁 src/
+│   ├── 📁 ai/
+│   │   ├── 📁 analysis/
+│   │   │   ├── DelayAnalyzer.ts
+│   │   │   ├── DispersionAnalyzer.ts
+│   │   │   ├── FrequencyAnalyzer.ts
+│   │   │   ├── PatternAnalyzer.ts
+│   │   │   └── ProbabilityAnalyzer.ts
+│   │   ├── 📁 engines/
+│   │   │   ├── BaseEngine.ts
+│   │   │   ├── HybridEngine.ts
+│   │   │   ├── PredictiveEngine.ts
+│   │   │   ├── ProbabilityEngine.ts
+│   │   │   ├── SmartRandomEngine.ts
+│   │   │   ├── SpecialistEngine.ts
+│   │   │   └── StatisticalEngine.ts
+│   │   ├── 📁 evaluation/
+│   │   │   ├── ConfidenceCalculator.ts
+│   │   │   └── GameEvaluator.ts
+│   │   ├── 📁 factory/
+│   │   │   └── EngineFactory.ts
+│   │   ├── 📁 services/
+│   │   │   ├── CacheManager.ts
+│   │   │   ├── GameExtras.ts
+│   │   │   ├── RandomGenerator.ts
+│   │   │   └── StatisticsContext.ts
+│   │   └── index.ts
+│   ├── 📁 routes/
+│   │   ├── generate.ts
+│   │   ├── analyze.ts
+│   │   └── predict.ts
+│   ├── 📁 middleware/
+│   │   └── auth.ts
+│   └── server.ts
+├── 📁 data/
+│   └── .gitkeep
+├── .env
+├── .gitignore
+├── package.json
+├── railway.json
+└── README.md
