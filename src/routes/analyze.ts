@@ -2,7 +2,7 @@
 
 import express from 'express';
 import { validateApiKey } from '../middleware/auth';
-import { IAOrchestrator } from '../ai';
+import { orchestrator } from '../ai';
 
 const router = express.Router();
 
