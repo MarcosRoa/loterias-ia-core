@@ -2,7 +2,7 @@
 
 import express from 'express';
 import { validateApiKey } from '../middleware/auth';
-import { IAOrchestrator } from '../ai';
+import { orchestrator } from '../ai';
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ router.post(
         });
       }
 
-      const result = await IAOrchestrator.predict({
+      const result = await orchestrator.predict({
         lotteryType,
         history,
         count
