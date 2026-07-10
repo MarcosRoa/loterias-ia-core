@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/ai/evaluation/ConfidenceCalculator.ts
 // ============================================
-// Calculadora de confiança para motores
+// Calculadora de confiança para motores 
 // ============================================
 
 export interface ConfidenceFactors {
