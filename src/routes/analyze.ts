@@ -20,7 +20,7 @@ router.post(
         });
       }
 
-      const result = await IAOrchestrator.analyze({
+      const result = await orchestrator.analyze({
         lotteryType,
         history
       });
