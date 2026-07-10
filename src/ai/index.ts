@@ -85,7 +85,6 @@ class IAOrchestrator {
 
       console.log(`🧠 Gerando ${count} jogos para ${config.nome} usando ${method}`);
 
-      // Criar engine
       const dados = history || [];
       const engineConfig = {
         ...config,
@@ -94,7 +93,6 @@ class IAOrchestrator {
 
       const engine = EngineFactory.criarEngine(method, dados, engineConfig, isPro);
 
-      // Verificar disponibilidade
       if (!engine.isDisponivel()) {
         return {
           success: false,
@@ -102,10 +100,7 @@ class IAOrchestrator {
         };
       }
 
-      // Gerar jogos
       const result = engine.gerarJogos(count, Date.now(), { dispersao: 15 });
-
-      // Calcular confiança
       const confidence = this.confidenceCalc.calcularCompleta(dados, ['frequencia', 'atraso', 'dispersao']);
 
       return {
@@ -150,7 +145,6 @@ class IAOrchestrator {
         };
       }
 
-      // Criar analyzers
       const frequency = new FrequencyAnalyzer(dados);
       const delay = new DelayAnalyzer(dados);
       const dispersion = new DispersionAnalyzer(dados);
@@ -205,14 +199,12 @@ class IAOrchestrator {
         };
       }
 
-      // Usar motor preditivo
       const engineConfig = {
         ...config,
         numerosPadrao: config.numerosPadrao
       };
 
       const engine = EngineFactory.criarEngine('predictive', dados, engineConfig, true);
-
       const result = engine.gerarJogos(count, Date.now(), { dispersao: 15 });
 
       return {
@@ -232,4 +224,5 @@ class IAOrchestrator {
   }
 }
 
-export const IAOrchestrator = new IAOrchestrator();
+// ✅ CORRIGIDO: instância com nome único
+export const orchestrator = new IAOrchestrator();
