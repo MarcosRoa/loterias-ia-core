@@ -1,4 +1,4 @@
-//src/routes/generate.js
+//src/routes/generate.ts
 
 import express from 'express';
 import { validateApiKey, validateLotteryType, validateCount } from '../middleware/auth';
