@@ -2,7 +2,7 @@
 
 import express from 'express';
 import { validateApiKey, validateLotteryType, validateCount } from '../middleware/auth';
-import { IAOrchestrator } from '../ai';
+import { orchestrator } from '../ai';
 
 const router = express.Router();
 
@@ -16,13 +16,13 @@ router.post(
       const { 
         lotteryType, 
         count = 1, 
-        method = 'smart',
+        method = 'hybrid',
         userId = null,
         isPro = false,
         history = []
       } = req.body;
 
-      const result = await IAOrchestrator.generate({
+      const result = await orchestrator.generate({
         lotteryType,
         count,
         method,
