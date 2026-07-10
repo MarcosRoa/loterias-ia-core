@@ -1,4 +1,4 @@
-//src/routes/analyze.js
+//src/routes/analyze.ts
 
 import express from 'express';
 import { validateApiKey } from '../middleware/auth';
