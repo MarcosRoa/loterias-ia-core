@@ -1,9 +1,8 @@
 // ============================================
-// src/ai/index.ts
+// CAMINHO: src/ai/index.ts
 // ============================================
-
-// ============================================
-// ORQUESTRADOR DE IAs
+// ORQUESTRADOR DE IAs - CORRIGIDO
+// AGORA RECEBE TODOS OS FILTROS DO FRONTEND
 // ============================================
 
 import { EngineFactory } from './factory/EngineFactory';
@@ -15,6 +14,10 @@ import { ProbabilityAnalyzer } from './analysis/ProbabilityAnalyzer';
 import { ConfidenceCalculator } from './evaluation/ConfidenceCalculator';
 import { GameEvaluator } from './evaluation/GameEvaluator';
 
+// ============================================
+// INTERFACES
+// ============================================
+
 export interface GenerateParams {
   lotteryType: string;
   count: number;
@@ -22,6 +25,11 @@ export interface GenerateParams {
   userId?: string | null;
   isPro?: boolean;
   history?: any[];
+  extraNumbers?: number;
+  period?: string;
+  dispersao?: number;
+  filters?: any;
+  dadosExtras?: any[];
 }
 
 export interface AnalyzeParams {
@@ -45,9 +53,17 @@ export interface GenerateResult {
   confidence?: number;
   engineName?: string;
   explanation?: string[];
+  creditsSpent?: number;
+  creditsRemaining?: number;
+  iaUsed?: boolean;
+  totalHistorico?: number;
   error?: string;
   timestamp?: string;
 }
+
+// ============================================
+// CONFIGURAÇÕES DAS LOTERIAS
+// ============================================
 
 const LOTTERY_CONFIGS: Record<string, any> = {
   megasena: { nome: 'Mega-Sena', maxNumero: 60, numerosPadrao: 6, incluirZero: false, temDispersao: true },
@@ -62,6 +78,10 @@ const LOTTERY_CONFIGS: Record<string, any> = {
   supersete: { nome: 'Super Sete', maxNumero: 9, numerosPadrao: 7, incluirZero: true, temDispersao: true }
 };
 
+// ============================================
+// ORQUESTRADOR
+// ============================================
+
 class IAOrchestrator {
   private confidenceCalc: ConfidenceCalculator;
   private evaluator: GameEvaluator;
@@ -71,10 +91,28 @@ class IAOrchestrator {
     this.evaluator = new GameEvaluator(60, 6);
   }
 
+  // ============================================
+  // GERAR JOGOS - CORRIGIDO
+  // ============================================
   async generate(params: GenerateParams): Promise<GenerateResult> {
     try {
-      const { lotteryType, count, method = 'hybrid', userId, isPro = false, history = [] } = params;
+      const { 
+        lotteryType, 
+        count, 
+        method = 'hybrid', 
+        userId, 
+        isPro = false, 
+        history = [],
+        extraNumbers = 0,
+        period = 'all',
+        dispersao = 15,
+        filters = {},
+        dadosExtras = []
+      } = params;
       
+      // ============================================
+      // VALIDAR LOTERIA
+      // ============================================
       const config = LOTTERY_CONFIGS[lotteryType];
       if (!config) {
         return {
@@ -83,14 +121,27 @@ class IAOrchestrator {
         };
       }
 
-      console.log(`🧠 Gerando ${count} jogos para ${config.nome} usando ${method}`);
+      console.log(`🧠 Gerando ${count} jogos para ${config.nome}`);
+      console.log(`   Método: ${method}`);
+      console.log(`   Extra: ${extraNumbers || config.numerosPadrao} números`);
+      console.log(`   Período: ${period}`);
+      console.log(`   Dispersão: ${dispersao}`);
+      console.log(`   Histórico: ${history?.length || 0} concursos`);
 
+      // ============================================
+      // PREPARAR DADOS
+      // ============================================
       const dados = history || [];
+      const numerosPorJogo = extraNumbers || config.numerosPadrao;
+
       const engineConfig = {
         ...config,
-        numerosPadrao: config.numerosPadrao
+        numerosPadrao: numerosPorJogo
       };
 
+      // ============================================
+      // CRIAR ENGINE
+      // ============================================
       const engine = EngineFactory.criarEngine(method, dados, engineConfig, isPro);
 
       if (!engine.isDisponivel()) {
@@ -100,9 +151,27 @@ class IAOrchestrator {
         };
       }
 
-      const result = engine.gerarJogos(count, Date.now(), { dispersao: 15 });
-      const confidence = this.confidenceCalc.calcularCompleta(dados, ['frequencia', 'atraso', 'dispersao']);
+      // ============================================
+      // GERAR JOGOS
+      // ============================================
+      const result = engine.gerarJogos(count, Date.now(), { 
+        dispersao: dispersao,
+        period: period,
+        filters: filters,
+        extraNumbers: numerosPorJogo
+      });
 
+      // ============================================
+      // CALCULAR CONFIANÇA
+      // ============================================
+      const confidenceResult = this.confidenceCalc.calcularCompleta(
+        dados, 
+        ['frequencia', 'atraso', 'dispersao', 'padroes']
+      );
+
+      // ============================================
+      // MONTAR RESULTADO
+      // ============================================
       return {
         success: true,
         method,
@@ -111,13 +180,22 @@ class IAOrchestrator {
         games: result.games.map((g: any) => g.numeros),
         analysis: {
           totalDraws: dados.length,
-          confidence: confidence.confianca
+          confidence: confidenceResult.confianca,
+          period: period,
+          dispersao: dispersao
         },
-        confidence: confidence.confianca,
+        confidence: confidenceResult.confianca,
         engineName: result.engineName,
-        explanation: result.explanation,
+        explanation: result.explanation || [
+          `🧠 IA ${method} aplicada`,
+          `📊 ${dados.length} concursos analisados`,
+          `🎯 Confiança: ${confidenceResult.confianca}%`
+        ],
+        iaUsed: dados.length >= 10,
+        totalHistorico: dados.length,
         timestamp: new Date().toISOString()
       };
+
     } catch (error: any) {
       console.error('❌ Erro no generate:', error);
       return {
@@ -127,6 +205,9 @@ class IAOrchestrator {
     }
   }
 
+  // ============================================
+  // ANALISAR DADOS
+  // ============================================
   async analyze(params: AnalyzeParams): Promise<any> {
     try {
       const { lotteryType, history } = params;
@@ -181,6 +262,9 @@ class IAOrchestrator {
     }
   }
 
+  // ============================================
+  // PREDIZER
+  // ============================================
   async predict(params: PredictParams): Promise<any> {
     try {
       const { lotteryType, history, count } = params;
@@ -224,5 +308,7 @@ class IAOrchestrator {
   }
 }
 
-// ✅ CORRIGIDO: instância com nome único
+// ============================================
+// EXPORTAÇÃO
+// ============================================
 export const orchestrator = new IAOrchestrator();
