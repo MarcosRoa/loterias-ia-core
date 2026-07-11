@@ -1,6 +1,7 @@
 /**
  * Classe principal para geração de jogos de loteria
  * com diferentes algoritmos de IA
+ src/ai/LotteryAI.js
  */
 class LotteryAI {
   constructor() {
