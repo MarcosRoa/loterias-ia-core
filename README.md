@@ -73,3 +73,49 @@ ALLOWED_ORIGINS	Não	Origens permitidas (CORS)
 NODE_ENV	Não	Ambiente (development/production)
 📄 Licença
 MIT
+
+
+📁 railway-project/
+├── 📁 src/
+│   ├── 📁 routes/
+│   │   └── 📄 statistics.ts          ← Endpoint /api/statistics
+│   │
+│   ├── 📁 statistics/
+│   │   ├── 📄 index.ts               ← Ponto de entrada
+│   │   ├── 📄 StatisticsEngine.ts    ← Orquestrador
+│   │   │
+│   │   ├── 📁 analyzers/
+│   │   │   ├── 📄 IAnalyzer.ts       ← Interface padrão
+│   │   │   ├── 📄 FrequencyAnalyzer.ts
+│   │   │   ├── 📄 DelayAnalyzer.ts
+│   │   │   ├── 📄 PairsAnalyzer.ts
+│   │   │   ├── 📄 TriplesAnalyzer.ts
+│   │   │   ├── 📄 HeatmapAnalyzer.ts
+│   │   │   ├── 📄 TrendAnalyzer.ts
+│   │   │   ├── 📄 EntropyAnalyzer.ts
+│   │   │   ├── 📄 DistributionAnalyzer.ts
+│   │   │   ├── 📄 GroupAnalyzer.ts
+│   │   │   ├── 📄 ParityAnalyzer.ts
+│   │   │   └── 📄 SequenceAnalyzer.ts
+│   │   │
+│   │   ├── 📁 models/
+│   │   │   └── 📄 StatisticsResult.ts
+│   │   │
+│   │   └── 📁 utils/
+│   │       ├── 📄 CsvParser.ts
+│   │       └── 📄 Normalizer.ts
+│   │
+│   └── 📁 server.ts                  ← Servidor principal (ajustar)
+│
+└── 📁 public/
+    └── 📁 csv/                       ← MOVER DA VERCELL
+        ├── megasena.csv
+        ├── quina.csv
+        ├── lotofacil.csv
+        ├── lotomania.csv
+        ├── duplasena.csv
+        ├── timemania.csv
+        ├── milionaria.csv
+        ├── diadesorte.csv
+        ├── supersete.csv
+        └── loteca.csv
