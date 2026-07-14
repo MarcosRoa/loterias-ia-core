@@ -44,6 +44,7 @@ export class CsvParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
+        const dadosExtras: any[] = []; // ✅ ADICIONAR dadosExtras
 
         const config = this.configs[lottery];
         if (!config) return null;
@@ -89,9 +90,46 @@ export class CsvParser {
             if (!data) continue;
 
             const numeros: number[] = [];
+            let extra: any = null;
+
             for (let j = dataIndex + 1; j < colunas.length; j++) {
                 let valor = colunas[j]?.trim();
                 if (valor === '' || valor === undefined) continue;
+
+                // ✅ TIMEMANIA - Capturar time do coração
+                if (lottery === 'timemania') {
+                    const numTeste = parseInt(valor);
+                    if (isNaN(numTeste) || valor.includes('/') || /[A-Za-zÀ-ú]/.test(valor)) {
+                        extra = valor; // Captura o time
+                        continue;
+                    }
+                }
+
+                // ✅ +MILIONÁRIA - Capturar trevos
+                if (lottery === 'milionaria') {
+                    // Trevos são os 2 últimos números após os 6 principais
+                    if (numeros.length >= 6 && extra === null) {
+                        extra = { trevos: [] };
+                    }
+                    if (extra && extra.trevos && extra.trevos.length < 2) {
+                        const numTeste = parseInt(valor);
+                        if (!isNaN(numTeste) && numTeste >= 1 && numTeste <= 6) {
+                            extra.trevos.push(numTeste);
+                            continue;
+                        }
+                    }
+                }
+
+                // ✅ DIA DE SORTE - Capturar mês
+                if (lottery === 'diadesorte') {
+                    if (numeros.length >= 7 && extra === null) {
+                        const numTeste = parseInt(valor);
+                        if (!isNaN(numTeste) && numTeste >= 1 && numTeste <= 12) {
+                            extra = numTeste; // Captura o mês
+                            continue;
+                        }
+                    }
+                }
 
                 let num = parseInt(valor);
                 if (isNaN(num)) {
@@ -112,9 +150,10 @@ export class CsvParser {
                 const numerosOrdenados = numeros.slice(0, config.numerosPadrao).sort((a, b) => a - b);
                 dados.push(numerosOrdenados);
                 datas.push(data);
+                dadosExtras.push(extra);
             }
         }
 
-        return { dados, datas, config };
+        return { dados, datas, dadosExtras, config };
     }
 }
