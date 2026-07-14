@@ -22,12 +22,17 @@ export interface StatisticsResult {
     paridade?: { pares: number; impares: number; quantidade: number }[];
     sequencias?: { inicio: number; fim: number; quantidade: number }[];
     columns?: number[][];
+    // ✅ ADICIONAR PROPRIEDADES EXTRAS
+    elementosExtras?: { nome: string; quantidade: number }[];
+    timemania?: any;
+    trevos?: any;
     error?: string;
 }
 
 export interface LotteryContext {
     dados: number[][];
     datas: string[];
+    dadosExtras?: any[];  // ✅ ADICIONAR dadosExtras
     config: {
         maxNumero: number;
         incluirZero: boolean;
