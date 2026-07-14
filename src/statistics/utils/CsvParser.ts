@@ -1,12 +1,13 @@
 // ============================================
 // CAMINHO: src/statistics/utils/CsvParser.ts
 // ============================================
-// PARSER DE CSV - LÊ ARQUIVOS LOCALMENTE
+// PARSER DE CSV - VERSÃO REFATORADA COM FACTORY
 // ============================================
 
 import fs from 'fs';
 import path from 'path';
 import { LotteryContext } from '../models/StatisticsResult';
+import { ParserFactory } from '../parsers/ParserFactory';
 
 export class CsvParser {
     private configs: Record<string, { maxNumero: number; incluirZero: boolean; numerosPadrao: number }> = {
@@ -24,7 +25,6 @@ export class CsvParser {
 
     async load(lottery: string): Promise<LotteryContext | null> {
         try {
-            // ✅ Lê CSV localmente (mais rápido)
             const filePath = path.join(process.cwd(), 'public', 'csv', `${lottery}.csv`);
             
             if (!fs.existsSync(filePath)) {
@@ -33,127 +33,27 @@ export class CsvParser {
             }
 
             const fileContent = fs.readFileSync(filePath, 'utf-8');
-            return this.parse(fileContent, lottery);
+            
+            // ✅ USAR PARSER ESPECÍFICO VIA FACTORY
+            const parser = ParserFactory.create(lottery);
+            const result = parser.parse(fileContent);
+
+            const config = this.configs[lottery];
+            if (!config) return null;
+
+            // ✅ ADICIONAR dadosExtras se existirem
+            const dadosExtras = result.dadosExtras || [];
+
+            return {
+                dados: result.dados,
+                datas: result.datas,
+                dadosExtras,
+                config
+            };
+
         } catch (error) {
             console.error(`❌ Erro ao carregar CSV ${lottery}:`, error);
             return null;
         }
-    }
-
-    parse(texto: string, lottery: string): LotteryContext | null {
-        const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
-        const dados: number[][] = [];
-        const datas: string[] = [];
-        const dadosExtras: any[] = []; // ✅ ADICIONAR dadosExtras
-
-        const config = this.configs[lottery];
-        if (!config) return null;
-
-        const sep = linhas[0]?.includes(';') ? ';' : ',';
-
-        const isDataValida = (str: string): boolean => {
-            return /^\d{2}\/\d{2}\/\d{4}$/.test(str) || /^\d{4}-\d{2}-\d{2}$/.test(str);
-        };
-
-        const parseData = (str: string): string | null => {
-            if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-                const [a, m, d] = str.split('-');
-                return `${d}/${m}/${a}`;
-            }
-            return null;
-        };
-
-        const minimo = config.incluirZero ? 0 : 1;
-
-        for (const linha of linhas) {
-            if (!linha.trim()) continue;
-
-            let colunas = linha.split(sep);
-            while (colunas.length > 0 && (colunas[colunas.length - 1].trim() === '' || colunas[colunas.length - 1].trim().includes(';'))) {
-                colunas.pop();
-            }
-
-            if (colunas.length < 2) continue;
-
-            let data: string | null = null;
-            let dataIndex = -1;
-            for (let j = 0; j < colunas.length; j++) {
-                const valor = colunas[j].trim();
-                if (isDataValida(valor)) {
-                    data = parseData(valor);
-                    dataIndex = j;
-                    break;
-                }
-            }
-
-            if (!data) continue;
-
-            const numeros: number[] = [];
-            let extra: any = null;
-
-            for (let j = dataIndex + 1; j < colunas.length; j++) {
-                let valor = colunas[j]?.trim();
-                if (valor === '' || valor === undefined) continue;
-
-                // ✅ TIMEMANIA - Capturar time do coração
-                if (lottery === 'timemania') {
-                    const numTeste = parseInt(valor);
-                    if (isNaN(numTeste) || valor.includes('/') || /[A-Za-zÀ-ú]/.test(valor)) {
-                        extra = valor; // Captura o time
-                        continue;
-                    }
-                }
-
-                // ✅ +MILIONÁRIA - Capturar trevos
-                if (lottery === 'milionaria') {
-                    // Trevos são os 2 últimos números após os 6 principais
-                    if (numeros.length >= 6 && extra === null) {
-                        extra = { trevos: [] };
-                    }
-                    if (extra && extra.trevos && extra.trevos.length < 2) {
-                        const numTeste = parseInt(valor);
-                        if (!isNaN(numTeste) && numTeste >= 1 && numTeste <= 6) {
-                            extra.trevos.push(numTeste);
-                            continue;
-                        }
-                    }
-                }
-
-                // ✅ DIA DE SORTE - Capturar mês
-                if (lottery === 'diadesorte') {
-                    if (numeros.length >= 7 && extra === null) {
-                        const numTeste = parseInt(valor);
-                        if (!isNaN(numTeste) && numTeste >= 1 && numTeste <= 12) {
-                            extra = numTeste; // Captura o mês
-                            continue;
-                        }
-                    }
-                }
-
-                let num = parseInt(valor);
-                if (isNaN(num)) {
-                    const numStr = valor.toString().trim();
-                    if (/^\d+$/.test(numStr)) {
-                        num = parseInt(numStr);
-                    } else {
-                        continue;
-                    }
-                }
-
-                if (num >= minimo && num <= config.maxNumero) {
-                    numeros.push(num);
-                }
-            }
-
-            if (numeros.length >= config.numerosPadrao) {
-                const numerosOrdenados = numeros.slice(0, config.numerosPadrao).sort((a, b) => a - b);
-                dados.push(numerosOrdenados);
-                datas.push(data);
-                dadosExtras.push(extra);
-            }
-        }
-
-        return { dados, datas, dadosExtras, config };
     }
 }
