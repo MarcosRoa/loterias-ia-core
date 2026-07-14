@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/analyzers/HeatmapAnalyzer.ts
 // ============================================
-// ANALISADOR DE HEATMAP - INDEPENDENTE
+// ANALISADOR DE HEATMAP - INDEPENDENTE (CORRETO)
 // ============================================
 
 export class HeatmapAnalyzer {
@@ -15,6 +15,7 @@ export class HeatmapAnalyzer {
             heatmap[i] = new Array(maxCategoria + 1).fill(0);
         }
 
+        // ✅ CORRETO: processa dados brutos (com ordem preservada)
         dados.forEach(item => {
             item.forEach((valor, idx) => {
                 if (idx < categorias && valor >= 0 && valor <= maxCategoria) {
