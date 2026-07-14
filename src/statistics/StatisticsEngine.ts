@@ -15,6 +15,7 @@ import { DistributionAnalyzer } from './analyzers/DistributionAnalyzer';
 import { GroupAnalyzer } from './analyzers/GroupAnalyzer';
 import { ParityAnalyzer } from './analyzers/ParityAnalyzer';
 import { SequenceAnalyzer } from './analyzers/SequenceAnalyzer';
+import { ExtrasAnalyzer } from './analyzers/ExtrasAnalyzer';
 import { CsvParser } from './utils/CsvParser';
 import { Normalizer } from './utils/Normalizer';
 import type { StatisticsResult } from './models/StatisticsResult';
@@ -22,10 +23,12 @@ import type { StatisticsResult } from './models/StatisticsResult';
 export class StatisticsEngine {
     private csvParser: CsvParser;
     private normalizer: Normalizer;
+    private extrasAnalyzer: ExtrasAnalyzer;
 
     constructor() {
         this.csvParser = new CsvParser();
         this.normalizer = new Normalizer();
+        this.extrasAnalyzer = new ExtrasAnalyzer();
     }
 
     async calculate(lottery: string, period: string): Promise<StatisticsResult> {
@@ -60,7 +63,7 @@ export class StatisticsEngine {
         const maxNumero = config.maxNumero;
         const incluirZero = config.incluirZero || false;
 
-        // 3. Criar analisadores (cada um independente)
+        // 3. Criar analisadores
         const frequencyAnalyzer = new FrequencyAnalyzer();
         const delayAnalyzer = new DelayAnalyzer();
         const pairsAnalyzer = new PairsAnalyzer();
@@ -73,7 +76,7 @@ export class StatisticsEngine {
         const parityAnalyzer = new ParityAnalyzer();
         const sequenceAnalyzer = new SequenceAnalyzer();
 
-        // 4. Executar análises (cada uma independente)
+        // 4. Executar análises
         const maisSorteados = frequencyAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
         const menosSorteados = frequencyAnalyzer.getLeastFrequent(dadosFiltrados, maxNumero, incluirZero);
         const atraso = delayAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
@@ -87,10 +90,14 @@ export class StatisticsEngine {
         const paridade = parityAnalyzer.analyze(dadosFiltrados);
         const sequencias = sequenceAnalyzer.analyze(dadosFiltrados);
 
+        // 5. Analisar elementos extras (Timemania, +Milionária, Dia de Sorte)
+        const dadosExtras = context.dadosExtras || [];
+        const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtras);
+
         const dataInicio = datasFiltradas[0] || 'N/A';
         const dataFim = datasFiltradas[datasFiltradas.length - 1] || 'N/A';
 
-        // 5. Montar resultado
+        // 6. Montar resultado
         const result: StatisticsResult = {
             success: true,
             totalDraws: dados.length,
@@ -109,6 +116,26 @@ export class StatisticsEngine {
             paridade,
             sequencias
         };
+
+        // Adicionar extras se existirem
+        if (lottery === 'timemania' && extrasResult.times) {
+            result.elementosExtras = extrasResult.times.ranking.map((item: any) => ({
+                nome: item.time,
+                quantidade: item.quantidade
+            }));
+            result.timemania = extrasResult;
+        }
+
+        if (lottery === 'milionaria' && extrasResult.trevos) {
+            result.trevos = extrasResult.trevos;
+        }
+
+        if (lottery === 'diadesorte' && extrasResult.meses) {
+            result.elementosExtras = extrasResult.meses.ranking.map((item: any) => ({
+                nome: String(item.mes),
+                quantidade: item.quantidade
+            }));
+        }
 
         if (columns) {
             result.columns = columns;
