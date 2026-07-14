@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/StatisticsEngine.ts
 // ============================================
-// ORQUESTRADOR - APENAS CHAMA OS ANALISADORES
+// ORQUESTRADOR - APENAS CHAMA OS ANALISADORES (CORRETO)
 // ============================================
 
 import { FrequencyAnalyzer } from './analyzers/FrequencyAnalyzer';
@@ -32,7 +32,7 @@ export class StatisticsEngine {
     }
 
     async calculate(lottery: string, period: string): Promise<StatisticsResult> {
-        // 1. Carregar CSV
+        // 1. Carregar CSV (com parser específico)
         const context = await this.csvParser.load(lottery);
         if (!context) {
             return {
@@ -41,7 +41,7 @@ export class StatisticsEngine {
             };
         }
 
-        const { dados, datas, config } = context;
+        const { dados, datas, config, dadosExtras } = context;
 
         if (dados.length === 0) {
             return {
@@ -82,7 +82,10 @@ export class StatisticsEngine {
         const atraso = delayAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
         const duplas = pairsAnalyzer.analyze(dadosFiltrados);
         const triplas = triplesAnalyzer.analyze(dadosFiltrados);
+        
+        // ✅ Heatmap: dados brutos (com ordem preservada)
         const columns = lottery === 'supersete' ? heatmapAnalyzer.analyze(dadosFiltrados, 7, 9) : undefined;
+        
         const tendencia = trendAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero, 30);
         const entropia = entropyAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
         const distribuicao = distributionAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
@@ -90,9 +93,8 @@ export class StatisticsEngine {
         const paridade = parityAnalyzer.analyze(dadosFiltrados);
         const sequencias = sequenceAnalyzer.analyze(dadosFiltrados);
 
-        // 5. Analisar elementos extras (Timemania, +Milionária, Dia de Sorte)
-        const dadosExtras = context.dadosExtras || [];
-        const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtras);
+        // 5. Analisar elementos extras
+        const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtras || []);
 
         const dataInicio = datasFiltradas[0] || 'N/A';
         const dataFim = datasFiltradas[datasFiltradas.length - 1] || 'N/A';
@@ -117,7 +119,6 @@ export class StatisticsEngine {
             sequencias
         };
 
-        // Adicionar extras se existirem
         if (lottery === 'timemania' && extrasResult.times) {
             result.elementosExtras = extrasResult.times.ranking.map((item: any) => ({
                 nome: item.time,
