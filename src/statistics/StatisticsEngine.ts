@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/StatisticsEngine.ts
 // ============================================
-// ORQUESTRADOR - APENAS CHAMA OS ANALISADORES (CORRETO)
+// ORQUESTRADOR - CORRIGIDO (FILTRA DADOS EXTRAS POR DATA REAL)
 // ============================================
 
 import { FrequencyAnalyzer } from './analyzers/FrequencyAnalyzer';
@@ -50,7 +50,8 @@ export class StatisticsEngine {
             };
         }
 
-        // 2. Aplicar filtro de período
+        // 2. ✅ Aplicar filtro de período (busca por data real)
+        // Exemplo: period = "1y", "3y", "5y", "7y", "9y", "all"
         const { dadosFiltrados, datasFiltradas } = this.normalizer.filterByPeriod(dados, datas, period);
 
         if (dadosFiltrados.length === 0) {
@@ -60,10 +61,23 @@ export class StatisticsEngine {
             };
         }
 
+        // 3. ✅ FILTRAR DADOS EXTRAS (usando as mesmas datas filtradas)
+        let dadosExtrasFiltrados: any[] = [];
+        if (dadosExtras && dadosExtras.length > 0) {
+            // Criar um Set com as datas filtradas para busca rápida O(1)
+            const datasFiltradasSet = new Set(datasFiltradas);
+            
+            // Filtrar dadosExtras baseado nas datas correspondentes
+            dadosExtrasFiltrados = dadosExtras.filter((_, index) => {
+                const data = datas[index];
+                return datasFiltradasSet.has(data);
+            });
+        }
+
         const maxNumero = config.maxNumero;
         const incluirZero = config.incluirZero || false;
 
-        // 3. Criar analisadores
+        // 4. Criar analisadores
         const frequencyAnalyzer = new FrequencyAnalyzer();
         const delayAnalyzer = new DelayAnalyzer();
         const pairsAnalyzer = new PairsAnalyzer();
@@ -76,14 +90,13 @@ export class StatisticsEngine {
         const parityAnalyzer = new ParityAnalyzer();
         const sequenceAnalyzer = new SequenceAnalyzer();
 
-        // 4. Executar análises
+        // 5. Executar análises
         const maisSorteados = frequencyAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
         const menosSorteados = frequencyAnalyzer.getLeastFrequent(dadosFiltrados, maxNumero, incluirZero);
         const atraso = delayAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero);
         const duplas = pairsAnalyzer.analyze(dadosFiltrados);
         const triplas = triplesAnalyzer.analyze(dadosFiltrados);
         
-        // ✅ Heatmap: dados brutos (com ordem preservada)
         const columns = lottery === 'supersete' ? heatmapAnalyzer.analyze(dadosFiltrados, 7, 9) : undefined;
         
         const tendencia = trendAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero, 30);
@@ -93,13 +106,13 @@ export class StatisticsEngine {
         const paridade = parityAnalyzer.analyze(dadosFiltrados);
         const sequencias = sequenceAnalyzer.analyze(dadosFiltrados);
 
-        // 5. Analisar elementos extras
-        const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtras || []);
+        // 6. ⭐ Analisar elementos extras (COM DADOS FILTRADOS POR DATA REAL)
+        const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtrasFiltrados);
 
         const dataInicio = datasFiltradas[0] || 'N/A';
         const dataFim = datasFiltradas[datasFiltradas.length - 1] || 'N/A';
 
-        // 6. Montar resultado
+        // 7. Montar resultado
         const result: StatisticsResult = {
             success: true,
             totalDraws: dados.length,
@@ -119,6 +132,7 @@ export class StatisticsEngine {
             sequencias
         };
 
+        // 8. ✅ Processar elementos extras (apenas se houver dados)
         if (lottery === 'timemania' && extrasResult.times) {
             result.elementosExtras = extrasResult.times.ranking.map((item: any) => ({
                 nome: item.time,
@@ -131,11 +145,15 @@ export class StatisticsEngine {
             result.trevos = extrasResult.trevos;
         }
 
+        // ⭐ Dia de Sorte: converte meses para elementosExtras
         if (lottery === 'diadesorte' && extrasResult.meses) {
-            result.elementosExtras = extrasResult.meses.ranking.map((item: any) => ({
+            const ranking = extrasResult.meses.ranking || [];
+            result.elementosExtras = ranking.map((item: any) => ({
                 nome: String(item.mes),
                 quantidade: item.quantidade
             }));
+            // Adiciona o nome do elemento para o frontend
+            result.nomeElemento = 'Mês de Sorte';
         }
 
         if (columns) {
