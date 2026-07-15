@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/StatisticsEngine.ts
 // ============================================
-// ORQUESTRADOR - APENAS CHAMA OS ANALISADORES (CORRETO)
+// ORQUESTRADOR - VERSÃO CORRIGIDA
 // ============================================
 
 import { FrequencyAnalyzer } from './analyzers/FrequencyAnalyzer';
@@ -83,7 +83,6 @@ export class StatisticsEngine {
         const duplas = pairsAnalyzer.analyze(dadosFiltrados);
         const triplas = triplesAnalyzer.analyze(dadosFiltrados);
         
-        // ✅ Heatmap: dados brutos (com ordem preservada)
         const columns = lottery === 'supersete' ? heatmapAnalyzer.analyze(dadosFiltrados, 7, 9) : undefined;
         
         const tendencia = trendAnalyzer.analyze(dadosFiltrados, maxNumero, incluirZero, 30);
@@ -119,23 +118,22 @@ export class StatisticsEngine {
             sequencias
         };
 
+        // ✅ Timemania - já está no formato correto
         if (lottery === 'timemania' && extrasResult.times) {
-            result.elementosExtras = extrasResult.times.ranking.map((item: any) => ({
-                nome: item.time,
-                quantidade: item.quantidade
-            }));
+            result.elementosExtras = extrasResult.times.ranking;
             result.timemania = extrasResult;
         }
 
+        // ✅ Milionária - já está no formato correto
         if (lottery === 'milionaria' && extrasResult.trevos) {
             result.trevos = extrasResult.trevos;
         }
 
-        if (lottery === 'diadesorte' && extrasResult.meses) {
-            result.elementosExtras = extrasResult.meses.ranking.map((item: any) => ({
-                nome: String(item.mes),
-                quantidade: item.quantidade
-            }));
+        // ✅ Dia de Sorte - CORRIGIDO: usar o novo formato
+        if (lottery === 'diadesorte' && extrasResult.elementosExtras) {
+            result.elementosExtras = extrasResult.elementosExtras;
+            // Adicionar nome do elemento extra para o frontend
+            result.nomeElemento = extrasResult.nomeElemento || 'Mês de Sorte';
         }
 
         if (columns) {
