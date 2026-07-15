@@ -12,7 +12,7 @@ export class DiaDeSorteParser extends BaseParser {
             maxNumero: 31,
             incluirZero: false,
             numerosPadrao: 7,
-            manterOrdem: false
+            manterOrdem: false // Ordena os números (como Mega-Sena)
         });
     }
 
@@ -20,10 +20,11 @@ export class DiaDeSorteParser extends BaseParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
-        const dadosExtras: any[] = [];
+        const dadosExtras: any[] = []; // ← Mês da Sorte
 
         const sep = this.detectarSeparador(linhas);
 
+        // Mapeamento de meses em texto para número
         const mesesMap: Record<string, number> = {
             'JANEIRO': 1, 'JAN': 1,
             'FEVEREIRO': 2, 'FEV': 2,
@@ -86,7 +87,7 @@ export class DiaDeSorteParser extends BaseParser {
                 }
             }
 
-            // ✅ Validar e ordenar
+            // ✅ Dia de Sorte: ORDENAR os números
             if (numeros.length >= 7) {
                 const numerosOrdenados = numeros.slice(0, 7).sort((a, b) => a - b);
                 dados.push(numerosOrdenados);
