@@ -1,18 +1,15 @@
 // ============================================
 // CAMINHO: src/statistics/models/StatisticsResult.ts
 // ============================================
-// TIPOS PARA RESULTADOS DE ESTATÍSTICAS (CORRIGIDO)
+// TIPOS PARA RESULTADOS DE ESTATÍSTICAS
 // ============================================
 
 export interface StatisticsResult {
     success: boolean;
-    error?: string;
     totalDraws?: number;
     filteredDraws?: number;
     dataInicio?: string;
     dataFim?: string;
-    
-    // Análises principais
     maisSorteados?: { numero: number; quantidade: number }[];
     menosSorteados?: { numero: number; quantidade: number }[];
     duplas?: { dupla: number[]; quantidade: number }[];
@@ -25,23 +22,10 @@ export interface StatisticsResult {
     paridade?: { pares: number; impares: number; quantidade: number }[];
     sequencias?: { inicio: number; fim: number; quantidade: number }[];
     columns?: number[][];
-    
-    // ✅ ELEMENTOS EXTRAS (padronizado para todas as loterias)
     elementosExtras?: { nome: string; quantidade: number }[];
-    nomeElemento?: string;  // Ex: "Mês de Sorte", "Time do Coração", "Trevo"
-    
-    // ✅ Específicos por loteria
-    timemania?: {
-        times: {
-            ranking: { nome: string; quantidade: number }[];
-            total: number;
-        }
-    };
-    trevos?: {
-        frequencia: { trevo: number; quantidade: number; percentual: number }[];
-        pares: { par: number[]; quantidade: number }[];
-        total: number;
-    };
+    timemania?: any;
+    trevos?: any;
+    error?: string;
 }
 
 export interface LotteryContext {
