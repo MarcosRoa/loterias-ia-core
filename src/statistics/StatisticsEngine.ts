@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/StatisticsEngine.ts
 // ============================================
-// ORQUESTRADOR - CORRIGIDO (FILTRA DADOS EXTRAS POR DATA REAL)
+// ORQUESTRADOR - CORRIGIDO (NORMALIZA PERÍODO)
 // ============================================
 
 import { FrequencyAnalyzer } from './analyzers/FrequencyAnalyzer';
@@ -32,6 +32,13 @@ export class StatisticsEngine {
     }
 
     async calculate(lottery: string, period: string): Promise<StatisticsResult> {
+        // ✅ NORMALIZAR PERÍODO: "1" → "1y", "3" → "3y", etc.
+        let periodNormalized = period;
+        if (period !== 'all' && !isNaN(Number(period))) {
+            periodNormalized = period + 'y';
+            console.log(`📊 Período normalizado: "${period}" → "${periodNormalized}"`);
+        }
+
         // 1. Carregar CSV (com parser específico)
         const context = await this.csvParser.load(lottery);
         if (!context) {
@@ -50,8 +57,8 @@ export class StatisticsEngine {
             };
         }
 
-        // 2. ✅ Aplicar filtro de período (busca por data real)
-        const { dadosFiltrados, datasFiltradas } = this.normalizer.filterByPeriod(dados, datas, period);
+        // 2. Aplicar filtro de período (COM PERÍODO NORMALIZADO)
+        const { dadosFiltrados, datasFiltradas } = this.normalizer.filterByPeriod(dados, datas, periodNormalized);
 
         if (dadosFiltrados.length === 0) {
             return {
@@ -60,7 +67,7 @@ export class StatisticsEngine {
             };
         }
 
-        // 3. ✅ FILTRAR DADOS EXTRAS (usando as mesmas datas filtradas)
+        // 3. Filtrar dados extras (usando as mesmas datas filtradas)
         let dadosExtrasFiltrados: any[] = [];
         if (dadosExtras && dadosExtras.length > 0) {
             const datasFiltradasSet = new Set(datasFiltradas);
@@ -102,7 +109,7 @@ export class StatisticsEngine {
         const paridade = parityAnalyzer.analyze(dadosFiltrados);
         const sequencias = sequenceAnalyzer.analyze(dadosFiltrados);
 
-        // 6. Analisar elementos extras (COM DADOS FILTRADOS POR DATA REAL)
+        // 6. Analisar elementos extras (COM DADOS FILTRADOS)
         const extrasResult = this.extrasAnalyzer.analyze(lottery, dadosFiltrados, dadosExtrasFiltrados);
 
         const dataInicio = datasFiltradas[0] || 'N/A';
@@ -128,7 +135,7 @@ export class StatisticsEngine {
             sequencias
         };
 
-        // 8. Processar elementos extras (apenas se houver dados)
+        // 8. Processar elementos extras
         if (lottery === 'timemania' && extrasResult.times) {
             result.elementosExtras = extrasResult.times.ranking.map((item: any) => ({
                 nome: item.time,
