@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/models/StatisticsResult.ts
 // ============================================
-// TIPOS PARA RESULTADOS DE ESTATÍSTICAS
+// TIPOS PARA RESULTADOS DE ESTATÍSTICAS (CORRIGIDO)
 // ============================================
 
 export interface StatisticsResult {
@@ -23,6 +23,7 @@ export interface StatisticsResult {
     sequencias?: { inicio: number; fim: number; quantidade: number }[];
     columns?: number[][];
     elementosExtras?: { nome: string; quantidade: number }[];
+    nomeElemento?: string;  // ✅ ADICIONAR ESTA LINHA
     timemania?: any;
     trevos?: any;
     error?: string;
