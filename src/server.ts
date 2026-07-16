@@ -28,17 +28,8 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Estatísticas (NOVO)
+// Estatísticas
 app.get('/api/statistics', handleStatistics);
-
-// Geração de jogos (já existe)
-// app.post('/api/generate', handleGenerate);
-
-// Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-    console.log(`📊 /api/statistics disponível`);
-});
 
 // ============================================
 // ENDPOINT PARA SERVIRE CSVs
@@ -64,7 +55,7 @@ app.get('/api/csv/:lottery', async (req, res) => {
         const content = fs.readFileSync(csvPath, 'utf8');
         
         // Processar CSV para JSON
-        const linhas = content.split('\n').filter(l => l.trim());
+        const linhas = content.split('\n').filter((l: string) => l.trim());
         if (linhas.length < 2) {
             return res.status(400).json({
                 success: false,
@@ -73,12 +64,12 @@ app.get('/api/csv/:lottery', async (req, res) => {
         }
         
         const cabecalho = linhas[0].split(';');
-        const dados = [];
+        const dados: any[] = [];
         
         for (let i = 1; i < linhas.length; i++) {
             const colunas = linhas[i].split(';');
-            const registro = {};
-            cabecalho.forEach((key, index) => {
+            const registro: Record<string, string> = {};
+            cabecalho.forEach((key: string, index: number) => {
                 registro[key.trim()] = colunas[index]?.trim() || '';
             });
             dados.push(registro);
@@ -92,11 +83,17 @@ app.get('/api/csv/:lottery', async (req, res) => {
             cabecalho
         });
         
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Erro ao servir CSV:', error);
         res.status(500).json({
             success: false,
-            error: error.message || 'Erro ao ler CSV'
+            error: error?.message || 'Erro ao ler CSV'
         });
     }
+});
+
+// Iniciar servidor
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`📊 /api/statistics disponível`);
 });
