@@ -7,12 +7,14 @@
 import express from 'express';
 import cors from 'cors';
 import { handleStatistics } from './routes/statistics';
+import generateRouter from './routes/generate';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/generate', generateRouter);
 
 // ============================================
 // ROTAS
