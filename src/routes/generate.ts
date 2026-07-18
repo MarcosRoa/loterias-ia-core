@@ -1,12 +1,11 @@
 // ============================================
 // CAMINHO: src/routes/generate.ts
 // ============================================
-// ROTA DE GERAÇÃO DE JOGOS - CORRIGIDA
-// AGORA ACEITA OS MESMOS NOMES DO FRONTEND
+// ROTA DE GERAÇÃO DE JOGOS - NORMALIZADA (FINAL)
 // ============================================
 
 import express from 'express';
-import { validateApiKey, validateLotteryType, validateCount } from '../middleware/auth';
+import { validateApiKey, validateLotteryType, validateCount, validateMethod } from '../middleware/auth';
 import { orchestrator } from '../ai';
 
 const router = express.Router();
@@ -16,49 +15,64 @@ router.post(
   validateApiKey,
   validateLotteryType,
   validateCount,
+  validateMethod,
   async (req, res) => {
     try {
       // ============================================
-      // 🔥 RECEBER OS MESMOS NOMES DO FRONTEND
+      // 🔥 EXTRAIR DADOS (COM NORMALIZAÇÃO)
       // ============================================
-      const { 
-        lottery,           // ← frontend envia 'lottery'
-        quantity,          // ← frontend envia 'quantity'
-        mode,              // ← frontend envia 'mode'
-        uid,               // ← frontend envia 'uid'
-        extraNumbers,      // ← frontend envia 'extraNumbers'
-        period,            // ← frontend envia 'period'
-        dispersao,         // ← frontend envia 'dispersao'
-        dados,             // ← frontend envia 'dados'
-        dadosExtras,       // ← frontend envia 'dadosExtras'
-        filters,           // ← frontend envia 'filters'
+      
+      // ✅ Loteria (já padronizado pelo middleware)
+      const lottery = req.body.lotteryType ?? req.body.lottery;
+      
+      // ✅ Quantidade (já padronizado pelo middleware)
+      const count = req.body.count ?? req.body.quantity ?? 1;
+      
+      // ✅ Método (já padronizado pelo middleware)
+      const method = req.body.method ?? req.body.mode ?? 'hybrid';
+      
+      // ✅ Period (normaliza filters.periodo)
+      const period = req.body.period ?? req.body.filters?.periodo ?? 'all';
+      
+      // ✅ Dispersao (normaliza filters.dispersao)
+      const dispersao = req.body.dispersao ?? req.body.filters?.dispersao ?? 15;
+      
+      const {
+        uid,
+        extraNumbers,
+        dados,
+        dadosExtras,
+        filters,
         isPro = false
       } = req.body;
 
-      console.log(`📥 /api/generate - Recebido:`, {
+      console.log(`📥 /api/generate - Normalizado:`, {
         lottery,
-        quantity,
-        mode,
-        uid,
-        extraNumbers,
+        count,
+        method,
         period,
         dispersao,
-        dadosLength: dados?.length || 0
+        uid,
+        extraNumbers,
+        dadosLength: dados?.length || 0,
+        filters
       });
 
       // ============================================
-      // 🔥 MAPEAR PARA O QUE O ORQUESTRADOR ESPERA
+      // 🔥 CHAMAR ORQUESTRADOR
       // ============================================
       const result = await orchestrator.generate({
-        lotteryType: lottery,           // ← lottery → lotteryType
-        count: quantity,                // ← quantity → count
-        method: mode || 'hybrid',       // ← mode → method
-        userId: uid,                    // ← uid → userId
+        lotteryType: lottery,
+        count: count,
+        method: method,
+        userId: uid,
         isPro: isPro,
-        history: dados || [],           // ← dados → history
+        // ✅ O Railway carrega os CSVs internamente
+        // history é apenas um fallback (se enviado)
+        history: dados || [],
         extraNumbers: extraNumbers || 0,
-        period: period || 'all',
-        dispersao: dispersao || 15,
+        period: period,
+        dispersao: dispersao,
         filters: filters || {},
         dadosExtras: dadosExtras || []
       });
