@@ -1,23 +1,24 @@
 // ============================================
 // CAMINHO: src/ai/engines/PredictiveEngine.ts
 // ============================================
-// IA PREDITIVA - APENAS PRO
-// ============================================
 
-import { BaseEngine, EngineResult, JogoGerado, EngineConfig } from './BaseEngine';
-import { PatternAnalyzer, Pattern } from '../analysis/PatternAnalyzer';
+import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine';
+import { PatternAnalyzer } from '../analysis/PatternAnalyzer';
+import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
+import { DelayAnalyzer } from '../analysis/DelayAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 
 export class PredictiveEngine extends BaseEngine {
     private confidenceCalc: ConfidenceCalculator;
 
-    constructor(dados: number[][], config: EngineConfig) {
-        super(dados, config, true);
+    constructor(
+        dados: number[][],
+        config: EngineConfig,
+        isPro: boolean = false,
+        extras?: EngineExtras
+    ) {
+        super(dados, config, isPro, extras);
         this.confidenceCalc = new ConfidenceCalculator();
-    }
-
-    isDisponivel(): boolean {
-        return this.isPro;
     }
 
     getNome(): string {
@@ -25,13 +26,26 @@ export class PredictiveEngine extends BaseEngine {
     }
 
     getDescricao(): string {
-        return 'Detecta padrões e tenta prever os próximos números. Exclusivo PRO.';
+        return 'Detecta padrões e tenta prever os próximos números';
+    }
+
+    isDisponivel(): boolean {
+        return this.isPro;
     }
 
     gerarJogos(quantidade: number, seed: number, params: any = {}): EngineResult {
         const jogos: JogoGerado[] = [];
 
-        if (!this.context || this.dados.length < 10) {
+        if (!this.isPro) {
+            return {
+                games: [],
+                confidence: 0,
+                engineName: this.getNome(),
+                explanation: ['⭐ Exclusivo para assinantes PRO']
+            };
+        }
+
+        if (!this.context || this.dados.length < 30) {
             for (let i = 0; i < quantidade; i++) {
                 const numeros = this.gerarAleatorio(this.config.numerosPadrao, seed + i);
                 const jogo = this.criarJogo(numeros, seed + i);
@@ -40,24 +54,27 @@ export class PredictiveEngine extends BaseEngine {
 
             return {
                 games: jogos,
-                confidence: 30,
+                confidence: 20,
                 engineName: this.getNome(),
-                explanation: ['⚠️ Poucos dados, usando aleatório']
+                explanation: ['🔮 Dados insuficientes para predição']
             };
         }
 
         const patterns = this.context.patterns;
-        const melhoresPadroes = patterns.getMelhoresPadroes(quantidade * 2);
-        const padroesSelecionados = melhoresPadroes.slice(0, quantidade);
+        const frequency = this.context.frequency;
+        const delay = this.context.delay;
 
         for (let i = 0; i < quantidade; i++) {
-            const padrao = padroesSelecionados[i % padroesSelecionados.length];
-            const numeros = this.gerarNumerosPorPadrao(padrao, seed + i);
+            const numeros = this.gerarNumerosPreditivos(
+                patterns,
+                frequency,
+                delay,
+                seed + i
+            );
             
             const jogo = this.criarJogo(numeros, seed + i, [
-                `🧩 Padrão: ${padrao.nome}`,
-                `🎯 Confiança: ${padrao.confianca}%`,
-                `📊 ${padrao.ocorrencias} ocorrências`
+                '🔮 Baseado em padrões históricos',
+                '📊 Predição de tendências'
             ]);
             
             jogos.push(jogo);
@@ -65,36 +82,71 @@ export class PredictiveEngine extends BaseEngine {
 
         const confianca = this.confidenceCalc.calcularCompleta(
             this.dados,
-            ['padroes', 'ciclos', 'duplas', 'intervalos']
+            ['frequencia', 'padroes']
         );
 
         return {
             games: jogos,
-            confidence: confianca.confianca,
+            confidence: Math.min(confianca.confianca + 5, 85),
             engineName: this.getNome(),
             explanation: [
-                `🧩 ${patterns.getPadroes().length} padrões detectados`,
+                `🔮 ${this.dados.length} concursos analisados`,
                 `🎯 Confiança: ${confianca.confianca.toFixed(0)}%`,
-                `📊 ${melhoresPadroes.length} padrões selecionados`
+                `📊 ${patterns.getMelhoresPadroes(5).length} padrões detectados`
             ]
         };
     }
 
-    private gerarNumerosPorPadrao(padrao: Pattern, seed: number): number[] {
+    private gerarNumerosPreditivos(
+        patterns: PatternAnalyzer,
+        frequency: FrequencyAnalyzer,
+        delay: DelayAnalyzer,
+        seed: number
+    ): number[] {
         const quantidade = this.config.numerosPadrao;
-        const max = this.config.maxNumero;
         const min = this.config.incluirZero ? 0 : 1;
+        const max = this.config.maxNumero;
+        const numeros = new Set<number>();
 
-        const patterns = this.context!.patterns;
-        const numeros = patterns.gerarNumerosPorPadrao(padrao, quantidade, max);
-
-        while (numeros.length < quantidade) {
-            const num = this.random.nextInt(min, max, seed + numeros.length);
-            if (!numeros.includes(num)) {
-                numeros.push(num);
+        // Identificar padrões promissores
+        const melhoresPadroes = patterns.getMelhoresPadroes(10);
+        const padroesNumeros = new Set<number>();
+        for (const padrao of melhoresPadroes) {
+            const nums = patterns.gerarNumerosPorPadrao(padrao, 5, max);
+            for (const n of nums) {
+                padroesNumeros.add(n);
             }
         }
 
-        return numeros.sort((a, b) => a - b);
+        // Combinar com frequência e atraso
+        const scores: { numero: number; score: number }[] = [];
+
+        for (let i = min; i <= max; i++) {
+            const freqScore = frequency.getFrequenciaNormalizada(i) / 100;
+            const delayScore = delay.getAtrasoNormalizado(i) / 100;
+            const padraoScore = padroesNumeros.has(i) ? 0.9 : 0.1;
+
+            const score = (
+                freqScore * 0.3 +
+                delayScore * 0.2 +
+                padraoScore * 0.5
+            ) * 100;
+
+            scores.push({ numero: i, score });
+        }
+
+        scores.sort((a, b) => b.score - a.score);
+
+        for (const item of scores) {
+            if (numeros.size >= quantidade) break;
+            numeros.add(item.numero);
+        }
+
+        while (numeros.size < quantidade) {
+            const num = this.random.nextInt(min, max, seed + numeros.size);
+            numeros.add(num);
+        }
+
+        return Array.from(numeros).sort((a, b) => a - b);
     }
 }
