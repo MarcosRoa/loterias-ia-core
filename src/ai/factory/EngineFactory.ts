@@ -1,7 +1,7 @@
 // ============================================
-// CAMINHO: src/ai/factory/EngineFactory.ts  25/07/2026
+// CAMINHO: src/ai/factory/EngineFactory.ts
 // ============================================
-// Fábrica de motores - CORRIGIDA (ACEITA EXTRAS)
+// Fábrica de motores - cria a engine escolhida
 // ============================================
 
 import { BaseEngine } from '../engines/BaseEngine';
@@ -20,35 +20,28 @@ export interface EngineInfo {
     isPro: boolean;
 }
 
-export interface EngineExtras {
-    dadosTimes?: any[];
-    dadosMeses?: any[];
-    dadosTrevos?: any[];
-}
-
 export class EngineFactory {
     static criarEngine(
         tipo: string,
         dados: number[][],
         config: any,
-        isPro: boolean = false,
-        extras?: EngineExtras
+        isPro: boolean = false
     ): BaseEngine {
         switch (tipo) {
             case 'statistical':
-                return new StatisticalEngine(dados, config, isPro, extras);
+                return new StatisticalEngine(dados, config);
             case 'hybrid':
-                return new HybridEngine(dados, config, isPro, extras);
+                return new HybridEngine(dados, config);
             case 'specialist':
-                return new SpecialistEngine(dados, config, isPro, extras);
+                return new SpecialistEngine(dados, config);
             case 'smartrandom':
-                return new SmartRandomEngine(dados, config, isPro, extras);
+                return new SmartRandomEngine(dados, config);
             case 'probability':
-                return new ProbabilityEngine(dados, config, isPro, extras);
+                return new ProbabilityEngine(dados, config);
             case 'predictive':
-                return new PredictiveEngine(dados, config, isPro, extras);
+                return new PredictiveEngine(dados, config);
             default:
-                return new HybridEngine(dados, config, isPro, extras);
+                return new HybridEngine(dados, config);
         }
     }
 
