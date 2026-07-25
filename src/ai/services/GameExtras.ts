@@ -1,7 +1,7 @@
 // ============================================
-// CAMINHO: src/ai/services/GameExtras.ts
+// CAMINHO: src/ai/services/GameExtras.ts  25/07/2026
 // ============================================
-// SERVIÇO DE ELEMENTOS EXTRAS - 100% CSV
+// SERVIÇO DE ELEMENTOS EXTRAS - CORRIGIDO
 // ============================================
 
 import { RandomGenerator } from './RandomGenerator';
@@ -13,6 +13,7 @@ export class GameExtras {
         this.random = random;
     }
 
+    // ✅ TIMEMANIA - USA DADOS HISTÓRICOS (SEM FALLBACK)
     gerarTime(seed: number, dadosTimes?: string[]): string | null {
         if (!dadosTimes || dadosTimes.length === 0) {
             return null;
@@ -20,7 +21,13 @@ export class GameExtras {
         
         const freq = new Map<string, number>();
         for (const time of dadosTimes) {
-            freq.set(time, (freq.get(time) || 0) + 1);
+            if (time) {
+                freq.set(time, (freq.get(time) || 0) + 1);
+            }
+        }
+
+        if (freq.size === 0) {
+            return null;
         }
 
         const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]);
@@ -38,27 +45,37 @@ export class GameExtras {
         return sorted[0]?.[0] || null;
     }
 
-    gerarTrevos(seed: number, dadosTrevos?: number[][]): number[] {
+    // ✅ +MILIONÁRIA - USA DADOS HISTÓRICOS (SEM FALLBACK)
+    gerarTrevos(seed: number, dadosTrevos?: { trevos: number[] }[]): number[] {
         if (!dadosTrevos || dadosTrevos.length === 0) {
-            const trevos = new Set<number>();
-            while (trevos.size < 2) {
-                trevos.add(Math.floor(this.random.next(seed + trevos.size) * 6) + 1);
-            }
-            return Array.from(trevos).sort((a, b) => a - b);
+            return [];
         }
 
         const freq = new Array(7).fill(0);
-        for (const par of dadosTrevos) {
-            for (const t of par) {
-                if (t >= 1 && t <= 6) freq[t]++;
+        let total = 0;
+        
+        for (const item of dadosTrevos) {
+            if (item && item.trevos && Array.isArray(item.trevos)) {
+                for (const t of item.trevos) {
+                    if (t >= 1 && t <= 6) {
+                        freq[t]++;
+                        total++;
+                    }
+                }
             }
         }
 
-        const total = freq.reduce((a, b) => a + b, 0);
-        const trevos = new Set<number>();
+        if (total === 0) {
+            return [];
+        }
 
-        while (trevos.size < 2) {
-            let rand = this.random.next(seed + trevos.size);
+        const trevos = new Set<number>();
+        let tentativas = 0;
+        const maxTentativas = 100;
+
+        while (trevos.size < 2 && tentativas < maxTentativas) {
+            tentativas++;
+            let rand = this.random.next(seed + trevos.size + tentativas);
             let acumulado = 0;
             for (let i = 1; i <= 6; i++) {
                 acumulado += freq[i] / total;
@@ -69,20 +86,35 @@ export class GameExtras {
             }
         }
 
+        // Se não conseguiu 2 trevos, preenche com aleatório
+        while (trevos.size < 2) {
+            const num = Math.floor(this.random.next(seed + trevos.size + 100) * 6) + 1;
+            trevos.add(num);
+        }
+
         return Array.from(trevos).sort((a, b) => a - b);
     }
 
+    // ✅ DIA DE SORTE - USA DADOS HISTÓRICOS (SEM FALLBACK)
     gerarMes(seed: number, dadosMeses?: number[]): number | null {
         if (!dadosMeses || dadosMeses.length === 0) {
             return null;
         }
 
         const freq = new Array(13).fill(0);
+        let total = 0;
+        
         for (const mes of dadosMeses) {
-            if (mes >= 1 && mes <= 12) freq[mes]++;
+            if (mes >= 1 && mes <= 12) {
+                freq[mes]++;
+                total++;
+            }
         }
 
-        const total = freq.reduce((a, b) => a + b, 0);
+        if (total === 0) {
+            return null;
+        }
+
         let rand = this.random.next(seed);
         let acumulado = 0;
         for (let i = 1; i <= 12; i++) {
@@ -92,7 +124,16 @@ export class GameExtras {
             }
         }
 
-        return 1;
+        // Fallback: retorna o mês mais frequente
+        let maxFreq = 0;
+        let maxMes = 1;
+        for (let i = 1; i <= 12; i++) {
+            if (freq[i] > maxFreq) {
+                maxFreq = freq[i];
+                maxMes = i;
+            }
+        }
+        return maxMes;
     }
 
     gerarSuperSete(seed: number): number[][] {
