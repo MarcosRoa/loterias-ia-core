@@ -3,7 +3,10 @@
 // ============================================
 // ORQUESTRADOR DE IAs - CORRIGIDO (UNIFICADO)
 // ============================================
-
+console.log(`📤 Orchestrator: enviando extras para engine:`, {
+    temTime: lotteryType === 'timemania',
+    dadosTimes: lotteryType === 'timemania' ? dataset.dadosExtras.length : 0
+});
 import { EngineFactory } from './factory/EngineFactory';
 import { FrequencyAnalyzer } from './analysis/FrequencyAnalyzer';
 import { DelayAnalyzer } from './analysis/DelayAnalyzer';
