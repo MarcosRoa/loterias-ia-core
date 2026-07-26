@@ -1,7 +1,7 @@
 // ============================================
-// CAMINHO: src/ai/engines/BaseEngine.ts  25/07/2026
+// CAMINHO: src/ai/engines/BaseEngine.ts 25/07/2026
 // ============================================
-// INTERFACE BASE PARA TODOS OS MOTORES - DESACOPLADA
+// INTERFACE BASE PARA TODOS OS MOTORES - CORRIGIDA
 // ============================================
 
 import { StatisticsContext } from '../services/StatisticsContext';
@@ -52,8 +52,10 @@ export abstract class BaseEngine {
     protected random: RandomGenerator;
     protected extras: GameExtras;
     
-    // ✅ DADOS EXTRAS (DESACOPLADO - UM ÚNICO OBJETO)
-    protected extrasHistoricos: EngineExtras = {};
+    // ✅ DADOS EXTRAS (CARREGADOS DO CSV)
+    protected dadosTimes: any[] = [];
+    protected dadosMeses: any[] = [];
+    protected dadosTrevos: any[] = [];
 
     constructor(
         dados: number[][],
@@ -67,8 +69,10 @@ export abstract class BaseEngine {
         this.random = new RandomGenerator(0);
         this.extras = new GameExtras(this.random);
         
-        // ✅ ARMAZENAR DADOS EXTRAS (DESACOPLADO)
-        this.extrasHistoricos = extras || {};
+        // ✅ ARMAZENAR DADOS EXTRAS
+        this.dadosTimes = extras?.dadosTimes || [];
+        this.dadosMeses = extras?.dadosMeses || [];
+        this.dadosTrevos = extras?.dadosTrevos || [];
         
         if (dados.length >= 10) {
             this.context = new StatisticsContext(dados);
@@ -93,7 +97,7 @@ export abstract class BaseEngine {
         return this.random.nextUniqueSorted(quantidade, min, max, seed);
     }
 
-    // ✅ ADICIONAR EXTRAS USANDO DADOS HISTÓRICOS (DESACOPLADO)
+    // ✅ ADICIONAR EXTRAS USANDO DADOS HISTÓRICOS
     protected adicionarExtras(seed: number): {
         timeCoracao?: string;
         trevos?: number[];
@@ -101,31 +105,31 @@ export abstract class BaseEngine {
         colunas?: number[][];
         lotecaResultados?: string[];
     } {
-        const result: any = {};
+        const extras: any = {};
 
         if (this.config.temTime) {
-            result.timeCoracao = this.extras.gerarTime(seed, this.extrasHistoricos.dadosTimes);
+            extras.timeCoracao = this.extras.gerarTime(seed, this.dadosTimes);
         }
 
         if (this.config.temTrevos) {
-            result.trevos = this.extras.gerarTrevos(seed, this.extrasHistoricos.dadosTrevos);
+            extras.trevos = this.extras.gerarTrevos(seed, this.dadosTrevos);
         }
 
         if (this.config.temMes) {
-            result.mesSorte = this.extras.gerarMes(seed, this.extrasHistoricos.dadosMeses);
+            extras.mesSorte = this.extras.gerarMes(seed, this.dadosMeses);
         }
 
         if (this.config.isSuperSete) {
-            result.colunas = this.extras.gerarSuperSete(seed);
-            result.numeros = result.colunas.flat();
+            extras.colunas = this.extras.gerarSuperSete(seed);
+            extras.numeros = extras.colunas.flat();
         }
 
         if (this.config.isLoteca) {
-            result.lotecaResultados = this.extras.gerarLoteca(seed);
-            result.numeros = [];
+            extras.lotecaResultados = this.extras.gerarLoteca(seed);
+            extras.numeros = [];
         }
 
-        return result;
+        return extras;
     }
 
     protected criarJogo(numeros: number[], seed: number, explicacao?: string[]): JogoGerado {
@@ -137,6 +141,10 @@ export abstract class BaseEngine {
 
         const extras = this.adicionarExtras(seed);
         Object.assign(jogo, extras);
+
+        return jogo;
+    }
+}
 
         return jogo;
     }
