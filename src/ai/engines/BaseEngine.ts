@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/ai/engines/BaseEngine.ts
 // ============================================
-// INTERFACE BASE PARA TODOS OS MOTORES - DESACOPLADA
+// INTERFACE BASE PARA TODOS OS MOTORES - CORRIGIDA
 // ============================================
 
 import { StatisticsContext } from '../services/StatisticsContext';
@@ -51,8 +51,6 @@ export abstract class BaseEngine {
     protected context: StatisticsContext | null = null;
     protected random: RandomGenerator;
     protected extras: GameExtras;
-    
-    // ✅ DADOS EXTRAS (DESACOPLADO - UM ÚNICO OBJETO)
     protected extrasHistoricos: EngineExtras = {};
 
     constructor(
@@ -66,8 +64,6 @@ export abstract class BaseEngine {
         this.isPro = isPro;
         this.random = new RandomGenerator(0);
         this.extras = new GameExtras(this.random);
-        
-        // ✅ ARMAZENAR DADOS EXTRAS (DESACOPLADO)
         this.extrasHistoricos = extras || {};
         
         if (dados.length >= 10) {
@@ -93,7 +89,6 @@ export abstract class BaseEngine {
         return this.random.nextUniqueSorted(quantidade, min, max, seed);
     }
 
-    // ✅ ADICIONAR EXTRAS USANDO DADOS HISTÓRICOS (DESACOPLADO)
     protected adicionarExtras(seed: number): {
         timeCoracao?: string;
         trevos?: number[];
@@ -117,12 +112,10 @@ export abstract class BaseEngine {
 
         if (this.config.isSuperSete) {
             result.colunas = this.extras.gerarSuperSete(seed);
-            result.numeros = result.colunas.flat();
         }
 
         if (this.config.isLoteca) {
             result.lotecaResultados = this.extras.gerarLoteca(seed);
-            result.numeros = [];
         }
 
         return result;
