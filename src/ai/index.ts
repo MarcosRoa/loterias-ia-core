@@ -3,9 +3,7 @@
 // ============================================
 // ORQUESTRADOR DE IAs - CORRIGIDO (UNIFICADO)
 // ============================================
-console.log(`📤 Orchestrator: enviando extras para engine:`, {
-    temTime: lotteryType === 'timemania',
-    dadosTimes: lotteryType === 'timemania' ? dataset.dadosExtras.length : 0
+
 });
 import { EngineFactory } from './factory/EngineFactory';
 import { FrequencyAnalyzer } from './analysis/FrequencyAnalyzer';
@@ -148,6 +146,10 @@ class IAOrchestrator {
           return { success: false, error: `Erro ao carregar dados da loteria ${lotteryType}` };
         }
       }
+      // ✅ LOG AQUI (DEPOIS DO DATASET)
+      console.log(`📊 Dataset final: ${dataset.totalDraws} concursos, ${dataset.dadosExtras?.length || 0} extras`);
+      console.log(`📊 Primeiro extra:`, JSON.stringify(dataset.dadosExtras?.[0] || 'NENHUM'));
+
 
       if (dataset.totalDraws === 0) {
         return { success: false, error: `Nenhum dado disponível para ${lotteryType}` };
