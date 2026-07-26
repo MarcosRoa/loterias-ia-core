@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/MilionariaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA +MILIONÁRIA
+// PARSER ESPECÍFICO PARA +MILIONÁRIA - CORRIGIDO
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -12,7 +12,7 @@ export class MilionariaParser extends BaseParser {
             maxNumero: 50,
             incluirZero: false,
             numerosPadrao: 6,
-            manterOrdem: false // Ordena os números (como Mega-Sena)
+            manterOrdem: false
         });
     }
 
@@ -20,7 +20,7 @@ export class MilionariaParser extends BaseParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
-        const dadosExtras: any[] = []; // ← Trevos
+        const dadosExtras: any[] = [];
 
         const sep = this.detectarSeparador(linhas);
 
@@ -38,7 +38,7 @@ export class MilionariaParser extends BaseParser {
             const numeros: number[] = [];
             const trevos: number[] = [];
 
-            // +Milionária: 6 números (1-50) + 2 trevos (1-6)
+            // ✅ +Milionária: 6 números (1-50) + 2 trevos (1-6)
             for (let j = dataIndex + 1; j < colunas.length; j++) {
                 let valor = colunas[j]?.trim();
                 if (valor === '' || valor === undefined) continue;
@@ -63,7 +63,6 @@ export class MilionariaParser extends BaseParser {
                 }
             }
 
-            // ✅ +Milionária: ORDENAR os números (como Mega-Sena)
             if (numeros.length >= 6) {
                 const numerosOrdenados = numeros.slice(0, 6).sort((a, b) => a - b);
                 dados.push(numerosOrdenados);
