@@ -1,6 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/index.ts  25/07/2026
 // ============================================
+// CAMINHO: src/ai/index.ts
+// ============================================
 // ORQUESTRADOR DE IAs - CORRIGIDO (UNIFICADO)
 // ============================================
 
@@ -32,6 +34,17 @@ export interface GenerateParams {
   dispersao?: number;
   filters?: any;
   dadosExtras?: any[];
+}
+
+export interface AnalyzeParams {
+  lotteryType: string;
+  history: any[];
+}
+
+export interface PredictParams {
+  lotteryType: string;
+  history: any[];
+  count: number;
 }
 
 export interface GenerateResult {
@@ -224,17 +237,105 @@ class IAOrchestrator {
   }
 
   // ============================================
-  // ANALISAR DADOS (mantido)
+  // ANALISAR DADOS
   // ============================================
   async analyze(params: AnalyzeParams): Promise<any> {
-    // ... mantido igual
+    try {
+      const { lotteryType, history } = params;
+      const config = LOTTERY_CONFIGS[lotteryType];
+      
+      if (!config) {
+        return { success: false, error: `Loteria ${lotteryType} não encontrada` };
+      }
+
+      const dados = history || [];
+
+      if (dados.length < 10) {
+        return {
+          success: false,
+          error: 'Dados insuficientes para análise (mínimo 10 concursos)'
+        };
+      }
+
+      const frequency = new FrequencyAnalyzer(dados);
+      const delay = new DelayAnalyzer(dados);
+      const dispersion = new DispersionAnalyzer(dados);
+      const patterns = new PatternAnalyzer(dados);
+      const probability = new ProbabilityAnalyzer(dados);
+
+      const confidence = this.confidenceCalc.calcularCompleta(dados, ['frequencia', 'atraso', 'dispersao', 'padroes']);
+
+      return {
+        success: true,
+        lotteryType,
+        analysis: {
+          frequency: frequency.getRanking(20),
+          delay: delay.getRanking(20),
+          dispersion: {
+            recentNumbers: Array.from(dispersion.getRecentes()),
+            windowSize: 15
+          },
+          patterns: patterns.getMelhoresPadroes(10),
+          probability: {
+            entropia: probability.getEntropia(),
+            variancia: probability.getVariancia()
+          },
+          confidence: confidence.confianca
+        },
+        totalDraws: dados.length,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Erro ao analisar dados'
+      };
+    }
   }
 
   // ============================================
-  // PREDIZER (mantido)
+  // PREDIZER
   // ============================================
   async predict(params: PredictParams): Promise<any> {
-    // ... mantido igual
+    try {
+      const { lotteryType, history, count } = params;
+      const config = LOTTERY_CONFIGS[lotteryType];
+      
+      if (!config) {
+        return { success: false, error: `Loteria ${lotteryType} não encontrada` };
+      }
+
+      const dados = history || [];
+
+      if (dados.length < 10) {
+        return {
+          success: false,
+          error: 'Dados insuficientes para predição (mínimo 10 concursos)'
+        };
+      }
+
+      const engineConfig = {
+        ...config,
+        numerosPadrao: config.numerosPadrao
+      };
+
+      const engine = EngineFactory.criarEngine('predictive', dados, engineConfig, true);
+      const result = engine.gerarJogos(count, Date.now(), { dispersao: 15 });
+
+      return {
+        success: true,
+        lotteryType,
+        predictions: result.games.map((g: any) => g.numeros),
+        confidence: result.confidence,
+        explanation: result.explanation,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Erro ao fazer predição'
+      };
+    }
   }
 }
 
