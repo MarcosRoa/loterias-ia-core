@@ -4,7 +4,7 @@
 // Fábrica de motores - CORRIGIDA (ACEITA EXTRAS)
 // ============================================
 
-import { BaseEngine } from '../engines/BaseEngine';
+import { BaseEngine, EngineExtras } from '../engines/BaseEngine';
 import { StatisticalEngine } from '../engines/StatisticalEngine';
 import { HybridEngine } from '../engines/HybridEngine';
 import { SpecialistEngine } from '../engines/SpecialistEngine';
@@ -18,12 +18,6 @@ export interface EngineInfo {
     descricao: string;
     disponivel: boolean;
     isPro: boolean;
-}
-
-export interface EngineExtras {
-    dadosTimes?: any[];
-    dadosMeses?: any[];
-    dadosTrevos?: any[];
 }
 
 export class EngineFactory {
