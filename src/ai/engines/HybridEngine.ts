@@ -1,10 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/engines/HybridEngine.ts
 // ============================================
-// IA HÍBRIDA - Combina estatística, probabilidade e tendência
-// ============================================
 
-import { BaseEngine, EngineResult, JogoGerado, EngineConfig } from './BaseEngine';
+import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine';
 import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { DelayAnalyzer } from '../analysis/DelayAnalyzer';
 import { DispersionAnalyzer } from '../analysis/DispersionAnalyzer';
@@ -15,8 +13,14 @@ import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 export class HybridEngine extends BaseEngine {
     private confidenceCalc: ConfidenceCalculator;
 
-    constructor(dados: number[][], config: EngineConfig) {
-        super(dados, config);
+    // ✅ ÚNICA MODIFICAÇÃO: CONSTRUTOR COM 4 ARGUMENTOS
+    constructor(
+        dados: number[][],
+        config: EngineConfig,
+        isPro: boolean = false,
+        extras?: EngineExtras
+    ) {
+        super(dados, config, isPro, extras);
         this.confidenceCalc = new ConfidenceCalculator();
     }
 
