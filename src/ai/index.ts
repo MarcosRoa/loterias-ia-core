@@ -1,7 +1,7 @@
 // ============================================
-// CAMINHO: src/ai/index.ts   24/07/2026
+// CAMINHO: src/ai/index.ts
 // ============================================
-// ORQUESTRADOR DE IAs - VERSÃO SIMPLIFICADA
+// ORQUESTRADOR DE IAs - CORRIGIDO (UNIFICADO)
 // ============================================
 
 import { EngineFactory } from './factory/EngineFactory';
@@ -12,8 +12,9 @@ import { PatternAnalyzer } from './analysis/PatternAnalyzer';
 import { ProbabilityAnalyzer } from './analysis/ProbabilityAnalyzer';
 import { ConfidenceCalculator } from './evaluation/ConfidenceCalculator';
 import { GameEvaluator } from './evaluation/GameEvaluator';
-// ✅ Importar a interface existente do BaseEngine
 import { JogoGerado } from './engines/BaseEngine';
+import { CsvLoader } from '../services/CsvLoader';
+import type { LotteryDataset } from '../services/CsvLoader';
 
 // ============================================
 // INTERFACES
@@ -49,7 +50,7 @@ export interface GenerateResult {
   method?: string;
   lotteryType?: string;
   count?: number;
-  games?: JogoGerado[]; // ✅ Agora usa a interface correta
+  games?: JogoGerado[];
   analysis?: any;
   confidence?: number;
   engineName?: string;
@@ -63,7 +64,7 @@ export interface GenerateResult {
 }
 
 // ============================================
-// CONFIGURAÇÕES DAS LOTERIAS (com flags extras)
+// CONFIGURAÇÕES DAS LOTERIAS
 // ============================================
 
 const LOTTERY_CONFIGS: Record<string, any> = {
@@ -93,7 +94,7 @@ class IAOrchestrator {
   }
 
   // ============================================
-  // GERAR JOGOS - SIMPLIFICADO
+  // GERAR JOGOS - CORRIGIDO (UNIFICADO)
   // ============================================
   async generate(params: GenerateParams): Promise<GenerateResult> {
     try {
@@ -107,8 +108,7 @@ class IAOrchestrator {
         extraNumbers = 0,
         period = 'all',
         dispersao = 15,
-        filters = {},
-        dadosExtras = []
+        filters = {}
       } = params;
       
       const config = LOTTERY_CONFIGS[lotteryType];
@@ -118,15 +118,40 @@ class IAOrchestrator {
 
       console.log(`🧠 Gerando ${count} jogos para ${config.nome}`);
       console.log(`   Método: ${method}`);
-      console.log(`   Extra: ${extraNumbers || config.numerosPadrao} números`);
       console.log(`   Período: ${period}`);
       console.log(`   Dispersão: ${dispersao}`);
-      console.log(`   Histórico: ${history?.length || 0} concursos`);
 
-      const dados = history || [];
+      // ============================================
+      // CARREGAR DATASET (UNIFICADO)
+      // ============================================
+      let dataset: LotteryDataset;
+      
+      if (history && history.length > 0) {
+        console.log(`   Usando history do frontend: ${history.length} concursos`);
+        dataset = {
+          dados: history,
+          dadosExtras: params.dadosExtras || [],
+          datas: [],
+          totalDraws: history.length
+        };
+      } else {
+        try {
+          console.log(`   Carregando CSV local: ${lotteryType}`);
+          dataset = CsvLoader.load(lotteryType, period);
+          console.log(`   CSV carregado: ${dataset.totalDraws} concursos`);
+          console.log(`   Extras: ${dataset.dadosExtras.length} registros`);
+        } catch (error) {
+          console.error(`❌ Erro ao carregar CSV:`, error);
+          return { success: false, error: `Erro ao carregar dados da loteria ${lotteryType}` };
+        }
+      }
+
+      if (dataset.totalDraws === 0) {
+        return { success: false, error: `Nenhum dado disponível para ${lotteryType}` };
+      }
+
       const numerosPorJogo = extraNumbers || config.numerosPadrao;
 
-      // ✅ Passa as flags para a engine
       const engineConfig = {
         ...config,
         numerosPadrao: numerosPorJogo,
@@ -135,7 +160,12 @@ class IAOrchestrator {
         temMes: config.temMes || false
       };
 
-      const engine = EngineFactory.criarEngine(method, dados, engineConfig, isPro);
+      const engine = EngineFactory.criarEngine(
+        method, 
+        dataset.dados, 
+        engineConfig, 
+        isPro
+      );
 
       if (!engine.isDisponivel()) {
         return { success: false, error: 'Este motor não está disponível para o seu plano' };
@@ -148,26 +178,24 @@ class IAOrchestrator {
         extraNumbers: numerosPorJogo
       });
 
-      // 🔥 LOG TEMPORÁRIO PARA VERIFICAR EXTRAS
       console.log('========== EXTRAS GERADOS ==========');
       console.log('Loteria:', lotteryType);
       console.log('Jogos:', JSON.stringify(result.games, null, 2));
       console.log('=====================================');
 
       const confidenceResult = this.confidenceCalc.calcularCompleta(
-        dados, 
+        dataset.dados, 
         ['frequencia', 'atraso', 'dispersao', 'padroes']
       );
 
-      // ✅ RETORNA DIRETAMENTE O OBJETO COMPLETO (SEM RECONSTRUÇÃO)
       return {
         success: true,
         method,
         lotteryType,
         count,
-        games: result.games, // ✅ Já contém todos os extras
+        games: result.games,
         analysis: {
-          totalDraws: dados.length,
+          totalDraws: dataset.totalDraws,
           confidence: confidenceResult.confianca,
           period,
           dispersao
@@ -176,11 +204,11 @@ class IAOrchestrator {
         engineName: result.engineName,
         explanation: result.explanation || [
           `🧠 IA ${method} aplicada`,
-          `📊 ${dados.length} concursos analisados`,
+          `📊 ${dataset.totalDraws} concursos analisados`,
           `🎯 Confiança: ${confidenceResult.confianca}%`
         ],
-        iaUsed: dados.length >= 10,
-        totalHistorico: dados.length,
+        iaUsed: dataset.totalDraws >= 10,
+        totalHistorico: dataset.totalDraws,
         timestamp: new Date().toISOString()
       };
 
@@ -194,17 +222,105 @@ class IAOrchestrator {
   }
 
   // ============================================
-  // ANALISAR DADOS (mantido)
+  // ANALISAR DADOS
   // ============================================
   async analyze(params: AnalyzeParams): Promise<any> {
-    // ... mantido igual
+    try {
+      const { lotteryType, history } = params;
+      const config = LOTTERY_CONFIGS[lotteryType];
+      
+      if (!config) {
+        return { success: false, error: `Loteria ${lotteryType} não encontrada` };
+      }
+
+      const dados = history || [];
+
+      if (dados.length < 10) {
+        return {
+          success: false,
+          error: 'Dados insuficientes para análise (mínimo 10 concursos)'
+        };
+      }
+
+      const frequency = new FrequencyAnalyzer(dados);
+      const delay = new DelayAnalyzer(dados);
+      const dispersion = new DispersionAnalyzer(dados);
+      const patterns = new PatternAnalyzer(dados);
+      const probability = new ProbabilityAnalyzer(dados);
+
+      const confidence = this.confidenceCalc.calcularCompleta(dados, ['frequencia', 'atraso', 'dispersao', 'padroes']);
+
+      return {
+        success: true,
+        lotteryType,
+        analysis: {
+          frequency: frequency.getRanking(20),
+          delay: delay.getRanking(20),
+          dispersion: {
+            recentNumbers: Array.from(dispersion.getRecentes()),
+            windowSize: 15
+          },
+          patterns: patterns.getMelhoresPadroes(10),
+          probability: {
+            entropia: probability.getEntropia(),
+            variancia: probability.getVariancia()
+          },
+          confidence: confidence.confianca
+        },
+        totalDraws: dados.length,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Erro ao analisar dados'
+      };
+    }
   }
 
   // ============================================
-  // PREDIZER (mantido)
+  // PREDIZER
   // ============================================
   async predict(params: PredictParams): Promise<any> {
-    // ... mantido igual
+    try {
+      const { lotteryType, history, count } = params;
+      const config = LOTTERY_CONFIGS[lotteryType];
+      
+      if (!config) {
+        return { success: false, error: `Loteria ${lotteryType} não encontrada` };
+      }
+
+      const dados = history || [];
+
+      if (dados.length < 10) {
+        return {
+          success: false,
+          error: 'Dados insuficientes para predição (mínimo 10 concursos)'
+        };
+      }
+
+      const engineConfig = {
+        ...config,
+        numerosPadrao: config.numerosPadrao
+      };
+
+      const engine = EngineFactory.criarEngine('predictive', dados, engineConfig, true);
+      const result = engine.gerarJogos(count, Date.now(), { dispersao: 15 });
+
+      return {
+        success: true,
+        lotteryType,
+        predictions: result.games.map((g: any) => g.numeros),
+        confidence: result.confidence,
+        explanation: result.explanation,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Erro ao fazer predição'
+      };
+    }
   }
 }
 
