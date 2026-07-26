@@ -73,7 +73,7 @@ export class SpecialistEngine extends BaseEngine {
             );
             
             const score = this.evaluator.avaliarJogo(numeros);
-            candidatosList.push({ numeros, score: score.pontuacao || 0 });
+            candidatosList.push({ numeros, score: score.score || 0 });
         }
 
         candidatosList.sort((a, b) => b.score - a.score);
