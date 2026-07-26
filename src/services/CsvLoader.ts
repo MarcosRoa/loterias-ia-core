@@ -85,3 +85,5 @@ export class CsvLoader {
         };
     }
 }
+console.log(`📊 CsvLoader: ${dadosExtras.length} registros extras carregados`);
+console.log(`📊 Primeiros extras:`, JSON.stringify(dadosExtras.slice(0, 3)));
