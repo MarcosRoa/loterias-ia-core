@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/ai/factory/EngineFactory.ts
 // ============================================
-// Fábrica de motores - cria a engine escolhida
+// Fábrica de motores - CORRIGIDA (ACEITA EXTRAS)
 // ============================================
 
 import { BaseEngine } from '../engines/BaseEngine';
@@ -20,28 +20,35 @@ export interface EngineInfo {
     isPro: boolean;
 }
 
+export interface EngineExtras {
+    dadosTimes?: any[];
+    dadosMeses?: any[];
+    dadosTrevos?: any[];
+}
+
 export class EngineFactory {
     static criarEngine(
         tipo: string,
         dados: number[][],
         config: any,
-        isPro: boolean = false
+        isPro: boolean = false,
+        extras?: EngineExtras
     ): BaseEngine {
         switch (tipo) {
             case 'statistical':
-                return new StatisticalEngine(dados, config);
+                return new StatisticalEngine(dados, config, isPro, extras);
             case 'hybrid':
-                return new HybridEngine(dados, config);
+                return new HybridEngine(dados, config, isPro, extras);
             case 'specialist':
-                return new SpecialistEngine(dados, config);
+                return new SpecialistEngine(dados, config, isPro, extras);
             case 'smartrandom':
-                return new SmartRandomEngine(dados, config);
+                return new SmartRandomEngine(dados, config, isPro, extras);
             case 'probability':
-                return new ProbabilityEngine(dados, config);
+                return new ProbabilityEngine(dados, config, isPro, extras);
             case 'predictive':
-                return new PredictiveEngine(dados, config);
+                return new PredictiveEngine(dados, config, isPro, extras);
             default:
-                return new HybridEngine(dados, config);
+                return new HybridEngine(dados, config, isPro, extras);
         }
     }
 
