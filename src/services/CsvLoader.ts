@@ -23,8 +23,11 @@ export class CsvLoader {
         if (!fs.existsSync(csvPath)) {
             throw new Error(`CSV não encontrado: ${lotteryType} (caminho: ${csvPath})`);
         }
-
-        // 2. Ler o arquivo
+        // ✅ COLOCAR AQUI (linha ~25)
+        const result = parser.parse(content);
+        console.log(`📊 CsvLoader: ${result.dadosExtras?.length || 0} registros extras carregados`);
+        console.log(`📊 Primeiros extras:`, JSON.stringify(result.dadosExtras?.slice(0, 3) || []));
+                // 2. Ler o arquivo
         const content = fs.readFileSync(csvPath, 'utf8');
 
         // 3. Parser específico da loteria
