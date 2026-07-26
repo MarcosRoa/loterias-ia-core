@@ -1,10 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/engines/StatisticalEngine.ts
 // ============================================
-// IA ESTATÍSTICA - Análise de frequência, atraso e dispersão
-// ============================================
 
-import { BaseEngine, EngineResult, JogoGerado, EngineConfig } from './BaseEngine';
+import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine';
 import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { DelayAnalyzer } from '../analysis/DelayAnalyzer';
 import { DispersionAnalyzer } from '../analysis/DispersionAnalyzer';
@@ -13,8 +11,14 @@ import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 export class StatisticalEngine extends BaseEngine {
     private confidenceCalc: ConfidenceCalculator;
 
-    constructor(dados: number[][], config: EngineConfig) {
-        super(dados, config);
+    // ✅ ÚNICA MODIFICAÇÃO: CONSTRUTOR COM 4 ARGUMENTOS
+    constructor(
+        dados: number[][],
+        config: EngineConfig,
+        isPro: boolean = false,
+        extras?: EngineExtras
+    ) {
+        super(dados, config, isPro, extras);
         this.confidenceCalc = new ConfidenceCalculator();
     }
 
@@ -23,7 +27,7 @@ export class StatisticalEngine extends BaseEngine {
     }
 
     getDescricao(): string {
-        return 'Analisa frequência, atraso e dispersão dos números';
+        return 'Analisa frequência, atraso e dispersão';
     }
 
     gerarJogos(quantidade: number, seed: number, params: any = {}): EngineResult {
@@ -61,7 +65,7 @@ export class StatisticalEngine extends BaseEngine {
             
             const jogo = this.criarJogo(numeros, seed + i, [
                 '📊 Baseado em frequência e atraso',
-                `📈 Dispersão: ${dispersao} concursos`
+                '🎯 Prioriza números mais prováveis'
             ]);
             
             jogos.push(jogo);
@@ -77,9 +81,8 @@ export class StatisticalEngine extends BaseEngine {
             confidence: confianca.confianca,
             engineName: this.getNome(),
             explanation: [
-                `📊 Baseado em ${this.dados.length} concursos`,
-                `🎯 Confiança: ${confianca.confianca.toFixed(0)}%`,
-                `📈 ${confianca.fatores.quantidadeConcursos.toFixed(0)}% dados disponíveis`
+                `📊 ${this.dados.length} concursos analisados`,
+                `🎯 Confiança: ${confianca.confianca.toFixed(0)}%`
             ]
         };
     }
@@ -94,15 +97,13 @@ export class StatisticalEngine extends BaseEngine {
         const min = this.config.incluirZero ? 0 : 1;
         const max = this.config.maxNumero;
         const numeros = new Set<number>();
+
         const scores: { numero: number; score: number }[] = [];
 
         for (let i = min; i <= max; i++) {
-            const freqScore = frequency.getFrequenciaNormalizada(i);
-            const delayScore = delay.getAtrasoNormalizado(i);
-            let score = freqScore * 0.5 + delayScore * 0.5;
-            
-            score = dispersion.aplicarPenalidade(i, score);
-            
+            const freqScore = frequency.getFrequenciaNormalizada(i) / 100;
+            const delayScore = delay.getAtrasoNormalizado(i) / 100;
+            const score = (freqScore * 0.6 + delayScore * 0.4) * 100;
             scores.push({ numero: i, score });
         }
 
