@@ -1,18 +1,22 @@
 // ============================================
 // CAMINHO: src/ai/engines/SmartRandomEngine.ts
 // ============================================
-// IA ALEATÓRIO INTELIGENTE - Aleatório com ponderação
-// ============================================
 
-import { BaseEngine, EngineResult, JogoGerado, EngineConfig } from './BaseEngine';
+import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine';
 import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 
 export class SmartRandomEngine extends BaseEngine {
     private confidenceCalc: ConfidenceCalculator;
 
-    constructor(dados: number[][], config: EngineConfig) {
-        super(dados, config);
+    // ✅ ÚNICA MODIFICAÇÃO: CONSTRUTOR COM 4 ARGUMENTOS
+    constructor(
+        dados: number[][],
+        config: EngineConfig,
+        isPro: boolean = false,
+        extras?: EngineExtras
+    ) {
+        super(dados, config, isPro, extras);
         this.confidenceCalc = new ConfidenceCalculator();
     }
 
@@ -27,7 +31,7 @@ export class SmartRandomEngine extends BaseEngine {
     gerarJogos(quantidade: number, seed: number, params: any = {}): EngineResult {
         const jogos: JogoGerado[] = [];
 
-        if (this.dados.length < 10) {
+        if (!this.context || this.dados.length < 5) {
             for (let i = 0; i < quantidade; i++) {
                 const numeros = this.gerarAleatorio(this.config.numerosPadrao, seed + i);
                 const jogo = this.criarJogo(numeros, seed + i);
@@ -36,79 +40,73 @@ export class SmartRandomEngine extends BaseEngine {
 
             return {
                 games: jogos,
-                confidence: 30,
+                confidence: 20,
                 engineName: this.getNome(),
-                explanation: ['⚠️ Poucos dados, usando aleatório puro']
+                explanation: ['🎲 Aleatório puro (poucos dados)']
             };
         }
 
-        const frequency = new FrequencyAnalyzer(this.dados);
-        const pesos = this.calcularPesos(frequency);
+        const frequency = this.context.frequency;
 
         for (let i = 0; i < quantidade; i++) {
-            const numeros = this.gerarNumerosPonderados(pesos, seed + i);
+            const numeros = this.gerarNumerosSmartRandom(frequency, seed + i);
             const jogo = this.criarJogo(numeros, seed + i, [
-                '🎲 Aleatório com ponderação',
-                `📊 Baseado em ${this.dados.length} concursos`
+                '🎲 Aleatório ponderado por frequência'
             ]);
             jogos.push(jogo);
         }
 
         const confianca = this.confidenceCalc.calcularCompleta(
             this.dados,
-            ['ponderacao']
+            ['frequencia']
         );
 
         return {
             games: jogos,
-            confidence: confianca.confianca,
+            confidence: Math.min(confianca.confianca, 50),
             engineName: this.getNome(),
             explanation: [
-                `🎲 Aleatório com ponderação estatística`,
-                `📊 ${this.dados.length} concursos analisados`,
-                `⚖️ Distribuição equilibrada`
+                `🎲 ${this.dados.length} concursos analisados`,
+                `📊 Aleatório com viés estatístico`
             ]
         };
     }
 
-    private calcularPesos(frequency: FrequencyAnalyzer): Map<number, number> {
-        const pesos = new Map<number, number>();
+    private gerarNumerosSmartRandom(
+        frequency: FrequencyAnalyzer,
+        seed: number
+    ): number[] {
+        const quantidade = this.config.numerosPadrao;
         const min = this.config.incluirZero ? 0 : 1;
         const max = this.config.maxNumero;
+        const numeros = new Set<number>();
+
+        const scores: { numero: number; peso: number }[] = [];
 
         for (let i = min; i <= max; i++) {
             const freq = frequency.getFrequencia(i);
-            const maxFreq = frequency.getRanking(1)[0]?.frequencia || 1;
-            
-            let peso;
-            if (freq > maxFreq * 0.7) {
-                peso = 0.3 + (this.random.next(i) * 0.1);
-            } else if (freq > maxFreq * 0.3) {
-                peso = 0.5 + (this.random.next(i) * 0.15);
-            } else {
-                peso = 0.2 + (this.random.next(i) * 0.15);
-            }
-            pesos.set(i, peso);
+            const peso = freq + this.random.next(seed + i) * 0.5;
+            scores.push({ numero: i, peso });
         }
 
-        return pesos;
-    }
+        const total = scores.reduce((acc, s) => acc + s.peso, 0);
+        let rand = this.random.next(seed);
 
-    private gerarNumerosPonderados(pesos: Map<number, number>, seed: number): number[] {
-        const quantidade = this.config.numerosPadrao;
-        const numeros = new Set<number>();
-        const sorted = Array.from(pesos.entries()).sort((a, b) => b[1] - a[1]);
-
-        while (numeros.size < quantidade) {
-            const rand = this.random.next(seed + numeros.size);
+        for (let i = 0; i < quantidade; i++) {
+            rand = this.random.next(seed + i + 100);
             let acumulado = 0;
-            for (const [num, peso] of sorted) {
-                acumulado += peso;
-                if (rand <= acumulado) {
-                    numeros.add(num);
+            for (const item of scores) {
+                acumulado += item.peso / total;
+                if (rand <= acumulado && !numeros.has(item.numero)) {
+                    numeros.add(item.numero);
                     break;
                 }
             }
+        }
+
+        while (numeros.size < quantidade) {
+            const num = this.random.nextInt(min, max, seed + numeros.size + 200);
+            numeros.add(num);
         }
 
         return Array.from(numeros).sort((a, b) => a - b);
