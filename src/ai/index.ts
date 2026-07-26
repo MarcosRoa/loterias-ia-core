@@ -159,12 +159,18 @@ class IAOrchestrator {
         temTrevos: config.temTrevos || false,
         temMes: config.temMes || false
       };
-
+      // ✅ EXTRAI DADOS ESPECÍFICOS PARA CADA LOTERIA
+      const extras = {
+        dadosTimes: lotteryType === 'timemania' ? dataset.dadosExtras : undefined,
+        dadosMeses: lotteryType === 'diadesorte' ? dataset.dadosExtras : undefined,
+        dadosTrevos: lotteryType === 'milionaria' ? dataset.dadosExtras : undefined
+      };
       const engine = EngineFactory.criarEngine(
         method, 
         dataset.dados, 
         engineConfig, 
-        isPro
+        isPro,
+        extras
       );
 
       if (!engine.isDisponivel()) {
