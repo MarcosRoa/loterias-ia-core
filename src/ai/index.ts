@@ -4,7 +4,6 @@
 // ORQUESTRADOR DE IAs - CORRIGIDO (UNIFICADO)
 // ============================================
 
-});
 import { EngineFactory } from './factory/EngineFactory';
 import { FrequencyAnalyzer } from './analysis/FrequencyAnalyzer';
 import { DelayAnalyzer } from './analysis/DelayAnalyzer';
@@ -146,7 +145,7 @@ class IAOrchestrator {
           return { success: false, error: `Erro ao carregar dados da loteria ${lotteryType}` };
         }
       }
-      
+
       if (dataset.totalDraws === 0) {
         return { success: false, error: `Nenhum dado disponível para ${lotteryType}` };
       }
