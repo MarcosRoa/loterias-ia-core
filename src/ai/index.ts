@@ -165,6 +165,9 @@ class IAOrchestrator {
         dadosMeses: config.temMes ? dataset.dadosExtras : undefined,
         dadosTrevos: config.temTrevos ? dataset.dadosExtras : undefined
       };
+      /////////////////////////////////////////////////
+      console.log('🧠 isPro no orchestrator:', isPro);
+      //////////////////////////////////////////////////
       const engine = EngineFactory.criarEngine(
         method, 
         dataset.dados, 
