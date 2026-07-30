@@ -45,7 +45,7 @@ router.post(
         filters,
         isPro = false
       } = req.body;
-
+      console.log('📥 isPro recebido no Railway:', isPro);
       console.log(`📥 /api/generate - Normalizado:`, {
         lottery,
         count,
