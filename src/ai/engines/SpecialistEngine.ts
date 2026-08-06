@@ -602,5 +602,5 @@ export class SpecialistEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { SpecialistEngine };
+
 export default SpecialistEngine;
