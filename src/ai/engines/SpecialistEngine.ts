@@ -350,29 +350,9 @@ export class SpecialistEngine extends BaseEngine {
         quantidade: number,
         seed: number
     ): number[] {
-        // ============================================
-        // PASSO 1: NORMALIZAR SCORES PARA PESOS
-        // ============================================
         const pesos = this.scoreNormalizer.normalizar(scores);
-
-        // ============================================
-        // PASSO 2: CRIAR POOL DE CANDIDATOS (TOP N)
-        // ============================================
-        const pool = this.candidatePool.criarPool(
-            pesos,
-            this.config.lotteryType
-        );
-
-        // ============================================
-        // PASSO 3: SELECIONAR NÚMEROS (PONDERADO)
-        // ============================================
-        const selecionados = this.selectionStrategy.selecionar(
-            pool,
-            quantidade,
-            { seed }
-        );
-
-        // ⚠️ SEM DIVERSIFICAÇÃO - retorna os números selecionados
+        const pool = this.candidatePool.criarPool(scores, this.config.lotteryType);
+        const selecionados = this.selectionStrategy.selecionar(pesos, quantidade, { seed });
         return selecionados;
     }
 
