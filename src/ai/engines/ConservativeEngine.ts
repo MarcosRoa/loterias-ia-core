@@ -370,5 +370,4 @@ export class ConservativeEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { ConservativeEngine };
 export default ConservativeEngine;
