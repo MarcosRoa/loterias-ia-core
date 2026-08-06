@@ -369,5 +369,5 @@ export class StatisticalEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { StatisticalEngine };
+
 export default StatisticalEngine;
