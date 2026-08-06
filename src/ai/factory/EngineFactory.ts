@@ -378,7 +378,6 @@ export class EngineFactory {
 // SEÇÃO 4: EXPORTS
 // ============================================
 
-export { EngineFactory };
 export type { EngineInfo, EngineType };
 
 // Exportação padrão para facilitar importação
