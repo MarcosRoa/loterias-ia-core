@@ -491,5 +491,5 @@ export class AggressiveEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { AggressiveEngine };
+
 export default AggressiveEngine;
