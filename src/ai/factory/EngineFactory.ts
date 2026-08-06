@@ -85,7 +85,7 @@ export class EngineFactory {
      * Mapeamento de tipos de engine para classes construtoras
      * Facilita a extensão sem modificar o switch
      */
-    private static readonly engineMap: Map<EngineType, any> = new Map([
+    private static readonly engineMap: Map<string, any> = new Map([
         ['statistical', StatisticalEngine],
         ['hybrid', HybridEngine],
         ['specialist', SpecialistEngine],
