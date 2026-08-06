@@ -418,5 +418,4 @@ export class ProbabilityEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { ProbabilityEngine };
 export default ProbabilityEngine;
