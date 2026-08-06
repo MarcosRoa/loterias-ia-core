@@ -8,7 +8,7 @@
 // SEÇÃO 1: IMPORTS
 // SEÇÃO 2: HYBRID ENGINE
 // SEÇÃO 3: MÉTODO GERAR JOGOS
-// SEÇÃO 4: CÁLCULO DE SCORES
+// SEÇÃO 4: CÁLCULO DE SCORES 
 // SEÇÃO 5: EXPORTS
 // ============================================
 
