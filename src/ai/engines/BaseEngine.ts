@@ -139,7 +139,7 @@ export abstract class BaseEngine {
         jogosGerados: number[][] = []
     ): number[] {
         const pesos = this.scoreNormalizer.normalizar(scores);
-        const pool = this.candidatePool.criarPool(pesos, this.config.lotteryType);
+        const pool = this.candidatePool.criarPool(scores, this.config.lotteryType);
         const selecionados = this.selectionStrategy.selecionar(pool, quantidade, { seed });
         const diversificados = this.diversificationService.diversificar(
             jogosGerados,
