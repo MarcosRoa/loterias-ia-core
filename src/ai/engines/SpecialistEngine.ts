@@ -352,7 +352,7 @@ export class SpecialistEngine extends BaseEngine {
     ): number[] {
         const pesos = this.scoreNormalizer.normalizar(scores);
         const pool = this.candidatePool.criarPool(scores, this.config.lotteryType);
-        const selecionados = this.selectionStrategy.selecionar(pesos, quantidade, { seed });
+        const selecionados = this.selectionStrategy.selecionar(pesos, quantidade, { seed, poolSize: this.config.maxNumero });
         return selecionados;
     }
 
