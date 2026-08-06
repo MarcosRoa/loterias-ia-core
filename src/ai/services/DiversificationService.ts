@@ -397,8 +397,6 @@ export class DiversificationService {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { DiversificationService };
-export type { DiversificationConfig, DiversificationResult, ScoreItem };
 
 // Exportação padrão para facilitar importação
 export default DiversificationService;
