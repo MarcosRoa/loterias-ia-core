@@ -360,8 +360,7 @@ export class CandidatePool {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { CandidatePool };
-export type { PoolConfig, PoolResult, ScoreItem };
+
 
 // Exportação padrão para facilitar importação
 export default CandidatePool;
