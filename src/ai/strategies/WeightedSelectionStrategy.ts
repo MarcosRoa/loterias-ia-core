@@ -265,8 +265,5 @@ export class WeightedSelectionStrategy extends SelectionStrategy {
 // SEÇÃO 7: EXPORTS
 // ============================================
 
-export { WeightedSelectionStrategy };
-export type { WeightedSelectionConfig };
-
 // Exportação padrão para facilitar importação
 export default WeightedSelectionStrategy;
