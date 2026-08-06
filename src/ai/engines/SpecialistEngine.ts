@@ -329,8 +329,7 @@ export class SpecialistEngine extends BaseEngine {
             // ============================================
             score = dispersion.aplicarPenalidade(
                 i,
-                score,
-                this.dispersionPenaltyFactor
+                score
             );
 
             scores.push({
