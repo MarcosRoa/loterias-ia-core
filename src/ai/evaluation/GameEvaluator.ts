@@ -3,7 +3,7 @@
 // ============================================
 // Avaliador de qualidade de jogos
 // ============================================
-
+ 
 export interface JogoAvaliado {
     numeros: number[];
     score: number;
