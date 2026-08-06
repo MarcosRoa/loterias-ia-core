@@ -250,8 +250,6 @@ export class ScoreNormalizer {
 // SEÇÃO 4: EXPORTS
 // ============================================
 
-export { ScoreNormalizer };
-export type { NormalizationResult };
 
 // Exportação padrão para facilitar importação
 export default ScoreNormalizer;
