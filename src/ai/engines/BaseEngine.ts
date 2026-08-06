@@ -137,23 +137,15 @@ export abstract class BaseEngine {
         seed: number,
         jogosGerados: number[][] = []
     ): number[] {
-        // 1. Normaliza scores para pesos (ScoreItem[] → WeightedItem[])
         const pesos = this.scoreNormalizer.normalizar(scores);
-
-        // 2. Cria pool de candidatos (WeightedItem[] → WeightedItem[])
         const pool = this.candidatePool.criarPool(pesos, this.config.lotteryType);
-
-        // 3. Seleciona números (WeightedItem[] → number[])
         const selecionados = this.selectionStrategy.selecionar(pool, quantidade, { seed });
-
-        // 4. Diversifica (number[] → number[])
         const diversificados = this.diversificationService.diversificar(
             jogosGerados,
             selecionados,
             this.derivarSeed(seed, 1000),
             scores
         );
-
         return diversificados;
     }
 
