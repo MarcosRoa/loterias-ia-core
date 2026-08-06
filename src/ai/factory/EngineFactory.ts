@@ -4,7 +4,7 @@
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.1.0 (SEM FALLBACK)
 // ============================================
-// 
+//  
 // SEÇÃO 1: IMPORTS
 // SEÇÃO 2: INTERFACES E TIPOS
 // SEÇÃO 3: ENGINE FACTORY
