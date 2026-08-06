@@ -385,4 +385,3 @@ export abstract class BaseEngine {
 // ============================================
 
 export { BaseEngine };
-export type { EngineConfig, EngineExtras, EngineResult, JogoGerado };
