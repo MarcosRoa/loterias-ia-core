@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/factory/EngineFactory.ts
-// DATA CRIAÇÃO: 2026-01-20
+// DATA CRIAÇÃO: 2026-01-20 
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.1.0 (SEM FALLBACK)
 // ============================================
