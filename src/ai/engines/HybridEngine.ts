@@ -494,6 +494,4 @@ export class HybridEngine extends BaseEngine {
 // ============================================
 // SEÇÃO 5: EXPORTS
 // ============================================
-
-export { HybridEngine };
 export default HybridEngine;
