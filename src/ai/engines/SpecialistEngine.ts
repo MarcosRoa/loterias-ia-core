@@ -3,7 +3,7 @@
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.1.0 (VERSÃO REVISADA)
-// ============================================
+// ============================================ 
 // 
 // SEÇÃO 1: IMPORTS
 // SEÇÃO 2: SPECIALIST ENGINE
