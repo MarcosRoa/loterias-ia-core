@@ -472,5 +472,5 @@ export class BalancedEngine extends BaseEngine {
 // SEÇÃO 5: EXPORTS
 // ============================================
 
-export { BalancedEngine };
+
 export default BalancedEngine;
