@@ -20,7 +20,7 @@ import {
     BaseEngine,
     EngineConfig,
     EngineExtras,
-    EngineResult,
+    EngineResult, 
     JogoGerado
 } from './BaseEngine';
 
