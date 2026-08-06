@@ -2,7 +2,7 @@
 // CAMINHO: src/ai/engines/SmartRandomEngine.ts
 // ============================================
 
-import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine';
+import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine'; 
 import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 
