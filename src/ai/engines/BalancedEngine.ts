@@ -1,5 +1,5 @@
 // ============================================
-// CAMINHO: src/ai/engines/BalancedEngine.ts
+// CAMINHO: src/ai/engines/BalancedEngine.ts 
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 1.0.0
