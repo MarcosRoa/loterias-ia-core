@@ -2,7 +2,7 @@
 // CAMINHO: src/ai/services/CandidatePool.ts
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 1.0.0
+// VERSÃO: 2.0.0 (VERSÃO REVISADA)
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
@@ -16,11 +16,20 @@
 // SEÇÃO 1: IMPORTS
 // ============================================
 
-import { ScoreItem, WeightedItem } from '../strategies/SelectionStrategy';
+// Nenhum import necessário - trabalha apenas com tipos locais
+// Não conhece WeightedItem - responsabilidade do ScoreNormalizer
 
 // ============================================
 // SEÇÃO 2: INTERFACES E TIPOS
 // ============================================
+
+/**
+ * Interface para itens com score (mesmo tipo de entrada e saída)
+ */
+export interface ScoreItem {
+    numero: number;
+    score: number;
+}
 
 /**
  * Configuração de pool para uma loteria específica
@@ -38,8 +47,8 @@ export interface PoolConfig {
  * Resultado da criação do pool
  */
 export interface PoolResult {
-    /** Pool de candidatos com pesos */
-    pool: WeightedItem[];
+    /** Pool de candidatos (mesmo tipo de entrada) */
+    pool: ScoreItem[];
     /** Tamanho do pool utilizado */
     tamanhoUtilizado: number;
     /** Total de candidatos originais */
@@ -61,28 +70,24 @@ export interface PoolResult {
  */
 const POOL_CONFIGS: Record<string, PoolConfig> = {
     // Mega-Sena: 60 números, 6 por jogo
-    // Pool menor porque os números têm distribuição mais estável
     megasena: {
         tamanho: 20,
         tamanhoMinimo: 15
     },
 
     // Quina: 80 números, 5 por jogo
-    // Pool médio
     quina: {
         tamanho: 25,
         tamanhoMinimo: 20
     },
 
     // Lotofácil: 25 números, 15 por jogo
-    // Pool maior porque muitos números são selecionados
     lotofacil: {
         tamanho: 35,
         tamanhoMinimo: 25
     },
 
     // Lotomania: 100 números, 20 por jogo
-    // Pool maior devido ao grande range
     lotomania: {
         tamanho: 40,
         tamanhoMinimo: 35
@@ -132,38 +137,39 @@ const POOL_CONFIGS: Record<string, PoolConfig> = {
 /**
  * Serviço de criação de pool de candidatos
  * 
- * Responsabilidade:
- * - Receber ScoreItem[] (scores brutos)
- * - Retornar WeightedItem[] (pool selecionado)
- * - Aplicar configurações específicas por loteria
- * - Garantir tamanho adequado do pool
- * 
- * Fluxo:
- * 1. Recebe scores e tipo de loteria
- * 2. Obtém configuração de pool para a loteria
- * 3. Ordena scores por valor (decrescente)
- * 4. Seleciona Top N (tamanho do pool)
- * 5. Retorna WeightedItem[] com os pesos
+ * Responsabilidade ÚNICA:
+ * - Receber ScoreItem[] (scores já normalizados pela engine)
+ * - Selecionar Top N baseado no score
+ * - Retornar ScoreItem[] (mesmo tipo, apenas reduzido)
  * 
  * A classe NÃO conhece:
- * - Como os scores foram calculados
+ * - WeightedItem (responsabilidade do ScoreNormalizer)
  * - Estratégias de seleção
+ * - Como os scores foram calculados
  * - Detalhes internos das engines
+ * 
+ * Fluxo:
+ * 1. Recebe ScoreItem[] e tipo da loteria
+ * 2. Obtém tamanho do pool para a loteria
+ * 3. Ordena por score decrescente
+ * 4. Seleciona Top N
+ * 5. Retorna ScoreItem[] (mesmo tipo)
  * 
  * @example
  * ```typescript
  * const poolService = new CandidatePool();
  * 
- * // Scores da engine
+ * // Scores já calculados pela engine
  * const scores: ScoreItem[] = [
  *   { numero: 23, score: 0.95 },
  *   { numero: 45, score: 0.87 },
  *   // ...
  * ];
  * 
- * // Cria pool para Mega-Sena
+ * // Cria pool para Mega-Sena (Top 20)
  * const pool = poolService.criarPool(scores, 'megasena');
- * // Retorna WeightedItem[] com os 20 melhores
+ * // Retorna ScoreItem[] com os 20 melhores
+ * // Mesmo tipo de entrada, apenas reduzido
  * ```
  */
 export class CandidatePool {
@@ -189,16 +195,16 @@ export class CandidatePool {
     /**
      * Cria o pool de candidatos para uma loteria específica
      * 
-     * @param scores - Scores brutos dos números
+     * @param scores - Scores dos números (já calculados pela engine)
      * @param lotteryType - Tipo da loteria
      * @param tamanhoPersonalizado - Tamanho personalizado (opcional)
-     * @returns Pool de candidatos com pesos
+     * @returns Pool de candidatos (mesmo tipo: ScoreItem[])
      */
     criarPool(
         scores: ScoreItem[],
         lotteryType: string,
         tamanhoPersonalizado?: number
-    ): WeightedItem[] {
+    ): ScoreItem[] {
         // ============================================
         // SEÇÃO: VALIDAÇÕES
         // ============================================
@@ -218,17 +224,7 @@ export class CandidatePool {
         // ============================================
         // SEÇÃO: ORDENAR E SELECIONAR TOP N
         // ============================================
-        const pool = this.selecionarTopN(scores, tamanhoPool);
-
-        // ============================================
-        // SEÇÃO: CONVERTER PARA WeightedItem[]
-        // ============================================
-        // Nota: Os pesos ainda não estão normalizados (soma = 1)
-        // Isso será feito pelo ScoreNormalizer
-        return pool.map(item => ({
-            numero: item.numero,
-            peso: item.score // Mantém o score original como peso
-        }));
+        return this.selecionarTopN(scores, tamanhoPool);
     }
 
     /**
@@ -249,7 +245,7 @@ export class CandidatePool {
 
         return {
             pool,
-            tamanhoUtilizado: Math.min(tamanhoPool, scores.length),
+            tamanhoUtilizado: pool.length,
             totalCandidatos: scores.length
         };
     }
@@ -276,10 +272,6 @@ export class CandidatePool {
         const config = this.configs[lotteryType];
         
         if (!config) {
-            console.warn(
-                `⚠️ Loteria "${lotteryType}" sem configuração de pool. ` +
-                `Usando tamanho padrão: ${this.TAMANHO_PADRAO}`
-            );
             return Math.min(this.TAMANHO_PADRAO, totalCandidatos);
         }
 
@@ -304,24 +296,14 @@ export class CandidatePool {
      * 
      * @param scores - Lista de scores
      * @param quantidade - Quantidade a selecionar
-     * @returns Top N scores
+     * @returns Top N scores (mesmo tipo: ScoreItem[])
      */
     private selecionarTopN(scores: ScoreItem[], quantidade: number): ScoreItem[] {
         // Ordena por score decrescente
         const ordenados = [...scores].sort((a, b) => b.score - a.score);
         
         // Seleciona Top N
-        const selecionados = ordenados.slice(0, quantidade);
-        
-        // Log de informação (apenas em desenvolvimento)
-        if (selecionados.length < scores.length) {
-            console.debug(
-                `📊 Pool criado: ${selecionados.length}/${scores.length} candidatos ` +
-                `(Top ${Math.round(selecionados.length / scores.length * 100)}%)`
-            );
-        }
-        
-        return selecionados;
+        return ordenados.slice(0, quantidade);
     }
 
     /**
@@ -365,6 +347,13 @@ export class CandidatePool {
     hasConfig(lotteryType: string): boolean {
         return !!this.configs[lotteryType];
     }
+
+    /**
+     * Obtém o tamanho padrão atual
+     */
+    getTamanhoPadrao(): number {
+        return this.TAMANHO_PADRAO;
+    }
 }
 
 // ============================================
@@ -372,7 +361,7 @@ export class CandidatePool {
 // ============================================
 
 export { CandidatePool };
-export type { PoolConfig, PoolResult };
+export type { PoolConfig, PoolResult, ScoreItem };
 
 // Exportação padrão para facilitar importação
 export default CandidatePool;
