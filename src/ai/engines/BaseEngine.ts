@@ -131,6 +131,7 @@ export abstract class BaseEngine {
     // SEÇÃO 4: MÉTODOS DE SELEÇÃO
     // ============================================
 
+   
     protected selecionarNumeros(
         scores: ScoreItem[],
         quantidade: number,
