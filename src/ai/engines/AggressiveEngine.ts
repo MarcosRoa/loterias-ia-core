@@ -2,7 +2,7 @@
 // CAMINHO: src/ai/engines/AggressiveEngine.ts
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 1.0.0
+// VERSÃO: 1.0.0 
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
