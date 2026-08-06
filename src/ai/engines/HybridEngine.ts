@@ -260,10 +260,7 @@ export class HybridEngine extends BaseEngine {
             // ============================================
             if (this.config.temDispersao) {
                 score = dispersion.aplicarPenalidade(
-                    i,
-                    score,
-                    this.dispersionPenaltyFactor
-                );
+                    i,score);
             }
 
             scores.push({
