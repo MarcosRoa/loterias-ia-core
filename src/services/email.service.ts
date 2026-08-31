@@ -31,18 +31,18 @@ export async function sendAccountDeletionRequest(
         subject: 'Solicitação de exclusão de conta - Loterias IA',
         html: `
             <h2>Solicitação de exclusão de conta</h2>
-
+    
             <p><strong>E-mail da conta:</strong> ${email}</p>
-
+    
             <p><strong>Motivo informado:</strong></p>
             <p>${reason}</p>
-
+    
             <hr>
-
+    
             <p>
                 O usuário solicitou a exclusão da conta do Loterias IA.
             </p>
-
+    
             <p>
                 Esta solicitação ainda não executa a exclusão automática.
             </p>
