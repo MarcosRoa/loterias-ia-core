@@ -223,23 +223,38 @@ export abstract class BaseEngine {
         // reduzido pelo pool.
         // ============================================
 
-        const poolScores: ScoreItem[] = pool.map(item => {
-            if ('peso' in item) {
-                return {
-                    numero: item.numero,
-                    score: item.peso
-                };
+        const poolItens: unknown[] = pool as unknown[];
+
+        const poolScores: ScoreItem[] = poolItens.map((item, index) => {
+            if (typeof item !== 'object' || item === null) {
+                throw new Error(
+                    `Item inválido retornado pelo CandidatePool na posição ${index}`
+                );
             }
 
-            if ('score' in item) {
-                return {
-                    numero: item.numero,
-                    score: item.score
-                };
+            const registro = item as Record<string, unknown>;
+            const numero = registro.numero;
+
+            if (typeof numero !== 'number' || !Number.isFinite(numero)) {
+                throw new Error(
+                    `Item inválido retornado pelo CandidatePool na posição ${index}: número inválido`
+                );
+            }
+
+            // CandidatePool pode expor o score bruto como "peso" ou "score",
+            // dependendo da versão compilada do serviço.
+            const peso = registro.peso;
+            if (typeof peso === 'number' && Number.isFinite(peso)) {
+                return { numero, score: peso };
+            }
+
+            const score = registro.score;
+            if (typeof score === 'number' && Number.isFinite(score)) {
+                return { numero, score };
             }
 
             throw new Error(
-                `Item inválido retornado pelo CandidatePool para o número ${item.numero}`
+                `Item inválido retornado pelo CandidatePool para o número ${numero}: score/peso inválido`
             );
         });
 
@@ -476,3 +491,4 @@ export abstract class BaseEngine {
 // ============================================
 
 export default BaseEngine;
+
