@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/ai/engines/BaseEngine.ts
 // DATA CRIAÇÃO: 02/09/2026
-// VERSÃO: 2.3.1 (COMPATIBILIDADE DE TIPOS)
+// VERSÃO: 2.3.2 (COMPATIBILIDADE DE TIPOS)
 // ============================================
 //
 // ALTERAÇÃO DESTA VERSÃO:
