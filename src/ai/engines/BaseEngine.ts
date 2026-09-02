@@ -13,6 +13,8 @@
 // - DiversificationService permanece no fluxo.
 // - Nenhuma alteração foi feita na estrutura de JogoGerado,
 //   EngineResult, EngineConfig ou nos métodos existentes.
+// - Compatibilidade explícita com as duas formas de item aceitas pelo CandidatePool.
+// - SelectionConfig recebe poolSize conforme contrato atual da estratégia.
 // - O seed interno baseado em Math.random() permanece inalterado
 //   nesta versão para manter o escopo da correção isolado.
 //
@@ -221,10 +223,25 @@ export abstract class BaseEngine {
         // reduzido pelo pool.
         // ============================================
 
-        const poolScores: ScoreItem[] = pool.map((item: WeightedItem) => ({
-            numero: item.numero,
-            score: item.peso
-        }));
+        const poolScores: ScoreItem[] = pool.map(item => {
+            if ('peso' in item) {
+                return {
+                    numero: item.numero,
+                    score: item.peso
+                };
+            }
+
+            if ('score' in item) {
+                return {
+                    numero: item.numero,
+                    score: item.score
+                };
+            }
+
+            throw new Error(
+                `Item inválido retornado pelo CandidatePool para o número ${item.numero}`
+            );
+        });
 
         // ============================================
         // PASSO 4: NORMALIZAR SOMENTE O POOL
@@ -250,7 +267,10 @@ export abstract class BaseEngine {
         const selecionados = this.selectionStrategy.selecionar(
             poolPesos,
             quantidade,
-            { seed }
+            {
+                seed,
+                poolSize: poolPesos.length
+            }
         );
 
         // ============================================
