@@ -35,7 +35,7 @@ export class PatternAnalyzer {
         if (dados.some(jogo =>
             !Array.isArray(jogo) ||
             jogo.length === 0 ||
-            jogo.some(n => !Number.isInteger(n) || n <= 0)
+            jogo.some(n => !Number.isInteger(n) || n < 0)
         )) {
             throw new Error('PatternAnalyzer: dados históricos contêm jogos inválidos.');
         }
@@ -261,7 +261,7 @@ export class PatternAnalyzer {
 
         for (const jogo of this.dados) {
             const faixas = jogo
-                .map(n => Math.floor((n - 1) / 10) + 1)
+                .map(n => n === 0 ? 1 : Math.floor((n - 1) / 10) + 1)
                 .sort((a, b) => a - b);
 
             const key = faixas.join('-');
@@ -425,8 +425,8 @@ export class PatternAnalyzer {
                 if (
                     !Number.isInteger(n1) ||
                     !Number.isInteger(n2) ||
-                    n1 < 1 ||
-                    n2 < 1 ||
+                    n1 < 0 ||
+                    n2 < 0 ||
                     n1 > maxNumero ||
                     n2 > maxNumero
                 ) {
@@ -462,7 +462,7 @@ export class PatternAnalyzer {
             case 'repeticao': {
                 if (
                     !Number.isInteger(padrao.valor) ||
-                    padrao.valor < 1 ||
+                    padrao.valor < 0 ||
                     padrao.valor > maxNumero
                 ) {
                     throw new Error('PatternAnalyzer: padrão de repetição inválido.');
