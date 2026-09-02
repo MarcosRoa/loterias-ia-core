@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/services/CandidatePool.ts
-// DATA CRIAÇÃO: 2026-01-20
+// DATA CRIAÇÃO: 2026-01-20  
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.0.0 (VERSÃO REVISADA)
 // ============================================
