@@ -3,6 +3,7 @@
 // DATA CRIAÇÃO: 02/09/2026
 // VERSÃO: 2.3.2 (COMPATIBILIDADE DE TIPOS)
 // ============================================
+
 //
 // ALTERAÇÃO DESTA VERSÃO:
 // - O CandidatePool passa a participar efetivamente da seleção.
@@ -170,12 +171,14 @@ export abstract class BaseEngine {
      * de candidatos. Portanto, a seleção nunca deve receber os scores
      * completos quando o pool reduziu esse universo.
      */
+    
     protected selecionarNumeros(
         scores: ScoreItem[],
         quantidade: number,
         seed: number,
         jogosGerados: number[][] = []
     ): number[] {
+
         // ============================================
         // PASSO 1: VALIDAR SCORES
         // ============================================
@@ -189,12 +192,7 @@ export abstract class BaseEngine {
         }
 
         // ============================================
-        // PASSO 2: CRIAR POOL DE CANDIDATOS
-        // ============================================
-        //
-        // O pool é definido pela configuração da loteria.
-        // A partir deste ponto, somente os candidatos presentes
-        // no pool podem participar da seleção.
+        // PASSO 2: CANDIDATOS PRIORITÁRIOS
         // ============================================
 
         const pool = this.candidatePool.criarPool(
@@ -208,85 +206,222 @@ export abstract class BaseEngine {
             );
         }
 
-        if (quantidade > pool.length) {
-            throw new Error(
-                `Não é possível selecionar ${quantidade} números de um pool com ${pool.length} candidatos`
-            );
-        }
-
         // ============================================
-        // PASSO 3: CONVERTER O POOL PARA ScoreItem[]
-        // ============================================
-        //
-        // CandidatePool mantém o score original no campo "peso".
-        // A normalização deve ser feita somente dentro do universo
-        // reduzido pelo pool.
+        // PASSO 3: CONVERTER POOL PARA ScoreItem[]
         // ============================================
 
-        const poolItens: unknown[] = pool as unknown[];
+        const poolScores: ScoreItem[] = pool.map((item, index) => {
 
-        const poolScores: ScoreItem[] = poolItens.map((item, index) => {
-            if (typeof item !== 'object' || item === null) {
+            if (!item || typeof item !== 'object') {
                 throw new Error(
                     `Item inválido retornado pelo CandidatePool na posição ${index}`
                 );
             }
 
-            const registro = item as Record<string, unknown>;
+            const registro =
+                item as unknown as Record<string, unknown>;
+
             const numero = registro.numero;
 
-            if (typeof numero !== 'number' || !Number.isFinite(numero)) {
+            if (
+                typeof numero !== 'number' ||
+                !Number.isFinite(numero)
+            ) {
                 throw new Error(
-                    `Item inválido retornado pelo CandidatePool na posição ${index}: número inválido`
+                    `Número inválido retornado pelo CandidatePool na posição ${index}`
                 );
             }
 
-            // CandidatePool pode expor o score bruto como "peso" ou "score",
-            // dependendo da versão compilada do serviço.
             const peso = registro.peso;
-            if (typeof peso === 'number' && Number.isFinite(peso)) {
-                return { numero, score: peso };
+
+            if (
+                typeof peso !== 'number' ||
+                !Number.isFinite(peso)
+            ) {
+                throw new Error(
+                    `Peso inválido retornado pelo CandidatePool para o número ${numero}`
+                );
             }
 
-            const score = registro.score;
-            if (typeof score === 'number' && Number.isFinite(score)) {
-                return { numero, score };
-            }
-
-            throw new Error(
-                `Item inválido retornado pelo CandidatePool para o número ${numero}: score/peso inválido`
-            );
+            return {
+                numero,
+                score: peso
+            };
         });
 
         // ============================================
-        // PASSO 4: NORMALIZAR SOMENTE O POOL
+        // PASSO 4: NORMALIZAR POOL
         // ============================================
 
         const poolPesos: WeightedItem[] =
             this.scoreNormalizer.normalizar(poolScores);
 
-        if (!poolPesos || poolPesos.length !== pool.length) {
+        if (
+            !poolPesos ||
+            poolPesos.length !== poolScores.length
+        ) {
             throw new Error(
-                `ScoreNormalizer retornou ${poolPesos?.length ?? 0} pesos para um pool com ${pool.length} candidatos`
+                `ScoreNormalizer retornou ${poolPesos?.length ?? 0} pesos para ${poolScores.length} candidatos`
             );
         }
 
         // ============================================
-        // PASSO 5: SELEÇÃO PONDERADA
-        // ============================================
-        //
-        // A estratégia recebe o pool já normalizado.
-        // Não recebe maxNumero nem o universo completo.
+        // PASSO 5: SELEÇÃO
         // ============================================
 
-        const selecionados = this.selectionStrategy.selecionar(
-            poolPesos,
-            quantidade,
-            {
-                seed,
-                poolSize: poolPesos.length
+        let selecionados: number[];
+
+        // --------------------------------------------
+        // CASO 1:
+        // A quantidade cabe dentro do pool.
+        // --------------------------------------------
+
+        if (quantidade <= poolPesos.length) {
+
+            selecionados =
+                this.selectionStrategy.selecionar(
+                    poolPesos,
+                    quantidade,
+                    {
+                        seed,
+                        poolSize: poolPesos.length
+                    }
+                );
+
+        } else {
+
+            // ----------------------------------------
+            // CASO 2:
+            // A modalidade exige mais números
+            // do que o pool prioritário.
+            //
+            // Exemplo:
+            // Lotomania = 50
+            // Pool       = 40
+            //
+            // Os 40 candidatos prioritários continuam
+            // sendo selecionados pela IA.
+            // Os demais candidatos são selecionados
+            // pelos seus scores reais.
+            // ----------------------------------------
+
+            const numerosPool = new Set(
+                poolPesos.map(item => item.numero)
+            );
+
+            const scoresRestantes = scores.filter(
+                item => !numerosPool.has(item.numero)
+            );
+
+            const totalDisponivel =
+                poolPesos.length +
+                scoresRestantes.length;
+
+            if (totalDisponivel < quantidade) {
+                throw new Error(
+                    `Não há candidatos únicos suficientes para gerar ` +
+                    `${quantidade} números na loteria "${this.config.lotteryType}". ` +
+                    `Disponíveis: ${totalDisponivel}.`
+                );
             }
-        );
+
+            // ----------------------------------------
+            // Seleciona os candidatos prioritários.
+            // ----------------------------------------
+
+            const partePool =
+                this.selectionStrategy.selecionar(
+                    poolPesos,
+                    poolPesos.length,
+                    {
+                        seed,
+                        poolSize: poolPesos.length
+                    }
+                );
+
+            if (partePool.length !== poolPesos.length) {
+                throw new Error(
+                    `WeightedSelectionStrategy retornou ` +
+                    `${partePool.length} números para um pool de ` +
+                    `${poolPesos.length}`
+                );
+            }
+
+            // ----------------------------------------
+            // Quantos números ainda faltam?
+            // ----------------------------------------
+
+            const quantidadeRestante =
+                quantidade - partePool.length;
+
+            // ----------------------------------------
+            // Normaliza os scores REAIS dos candidatos
+            // que ficaram fora do pool.
+            // ----------------------------------------
+
+            const pesosRestantes =
+                this.scoreNormalizer.normalizar(
+                    scoresRestantes
+                );
+
+            if (
+                !pesosRestantes ||
+                pesosRestantes.length !==
+                    scoresRestantes.length
+            ) {
+                throw new Error(
+                    `ScoreNormalizer retornou quantidade inválida ` +
+                    `para os candidatos restantes`
+                );
+            }
+
+            // ----------------------------------------
+            // Seleciona os candidatos restantes usando
+            // os scores reais.
+            // ----------------------------------------
+
+            const parteRestante =
+                this.selectionStrategy.selecionar(
+                    pesosRestantes,
+                    quantidadeRestante,
+                    {
+                        seed: this.derivarSeed(seed, 2000),
+                        poolSize: pesosRestantes.length
+                    }
+                );
+
+            if (
+                parteRestante.length !==
+                quantidadeRestante
+            ) {
+                throw new Error(
+                    `WeightedSelectionStrategy retornou ` +
+                    `${parteRestante.length} números, mas eram necessários ` +
+                    `${quantidadeRestante}`
+                );
+            }
+
+            // ----------------------------------------
+            // Garantia estrutural: nenhum duplicado.
+            // ----------------------------------------
+
+            const unicos = new Set([
+                ...partePool,
+                ...parteRestante
+            ]);
+
+            if (unicos.size !== quantidade) {
+                throw new Error(
+                    `Seleção produziu ${unicos.size} números únicos, ` +
+                    `mas eram esperados ${quantidade}`
+                );
+            }
+
+            selecionados = [
+                ...partePool,
+                ...parteRestante
+            ];
+        }
 
         // ============================================
         // PASSO 6: DIVERSIFICAÇÃO
@@ -299,6 +434,14 @@ export abstract class BaseEngine {
                 this.derivarSeed(seed, 1000),
                 scores
             );
+
+        if (diversificados.length !== quantidade) {
+            throw new Error(
+                `DiversificationService retornou ` +
+                `${diversificados.length} números, mas eram esperados ` +
+                `${quantidade}`
+            );
+        }
 
         return diversificados;
     }
