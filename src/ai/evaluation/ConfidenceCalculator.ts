@@ -372,7 +372,7 @@ export class ConfidenceCalculator {
             jogo.some(
                 numero =>
                     !Number.isInteger(numero) ||
-                    numero <= 0
+                    numero < 0
             )
         )) {
             throw new Error(
