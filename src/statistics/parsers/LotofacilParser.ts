@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/LotofacilParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA LOTOFÁCIL
+// PARSER ESPECÍFICO PARA LOTOFÁCIL 03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -12,7 +12,7 @@ export class LotofacilParser extends BaseParser {
             maxNumero: 25,
             incluirZero: false,
             numerosPadrao: 15,
-            manterOrdem: false // ← ORDENA OS NÚMEROS
+            manterOrdem: false
         });
     }
 
@@ -20,6 +20,7 @@ export class LotofacilParser extends BaseParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
+        const concursos: number[] = [];
 
         const sep = this.detectarSeparador(linhas);
 
@@ -34,16 +35,44 @@ export class LotofacilParser extends BaseParser {
             const { data, dataIndex } = this.extrairData(colunas);
             if (!data) continue;
 
+            // Concurso fica imediatamente antes da data
+            const concursoIndex = dataIndex - 1;
+
+            if (concursoIndex < 0) {
+                throw new Error(
+                    `LotofacilParser: concurso não encontrado antes da data "${data}".`
+                );
+            }
+
+            const concursoValor = colunas[concursoIndex]?.trim();
+
+            if (!concursoValor || !/^\d+$/.test(concursoValor)) {
+                throw new Error(
+                    `LotofacilParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}".`
+                );
+            }
+
+            const concurso = parseInt(concursoValor, 10);
+
+            if (!Number.isInteger(concurso) || concurso < 1) {
+                throw new Error(
+                    `LotofacilParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}".`
+                );
+            }
+
             const numeros: number[] = [];
 
             // Lotofácil: números de 1 a 25
             for (let j = dataIndex + 1; j < colunas.length; j++) {
                 let valor = colunas[j]?.trim();
+
                 if (valor === '' || valor === undefined) continue;
 
                 let num = parseInt(valor);
+
                 if (isNaN(num)) {
                     const numStr = valor.toString().trim();
+
                     if (/^\d+$/.test(numStr)) {
                         num = parseInt(numStr);
                     } else {
@@ -56,14 +85,21 @@ export class LotofacilParser extends BaseParser {
                 }
             }
 
-            // ✅ Lotofácil: ORDENAR os números
             if (numeros.length >= 15) {
-                const numerosOrdenados = numeros.slice(0, 15).sort((a, b) => a - b);
+                const numerosOrdenados = numeros
+                    .slice(0, 15)
+                    .sort((a, b) => a - b);
+
+                concursos.push(concurso);
                 dados.push(numerosOrdenados);
                 datas.push(data);
             }
         }
 
-        return { dados, datas };
+        return {
+            concursos,
+            dados,
+            datas
+        };
     }
 }
