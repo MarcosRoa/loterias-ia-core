@@ -1,7 +1,8 @@
+```ts
 // ============================================
 // CAMINHO: src/statistics/parsers/DiaDeSorteParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA DIA DE SORTE - CORRIGIDO
+// PARSER ESPECÍFICO PARA DIA DE SORTE  03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -20,23 +21,25 @@ export class DiaDeSorteParser extends BaseParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
+        const concursos: number[] = [];
         const dadosExtras: any[] = [];
 
         const sep = this.detectarSeparador(linhas);
 
-        const mesesMap: Record<string, number> = {
-            'JANEIRO': 1, 'JAN': 1,
-            'FEVEREIRO': 2, 'FEV': 2,
-            'MARÇO': 3, 'MAR': 3,
-            'ABRIL': 4, 'ABR': 4,
-            'MAIO': 5, 'MAI': 5,
-            'JUNHO': 6, 'JUN': 6,
-            'JULHO': 7, 'JUL': 7,
-            'AGOSTO': 8, 'AGO': 8,
-            'SETEMBRO': 9, 'SET': 9,
-            'OUTUBRO': 10, 'OUT': 10,
-            'NOVEMBRO': 11, 'NOV': 11,
-            'DEZEMBRO': 12, 'DEZ': 12
+        const meses: Record<string, number> = {
+            janeiro: 1,
+            fevereiro: 2,
+            marco: 3,
+            março: 3,
+            abril: 4,
+            maio: 5,
+            junho: 6,
+            julho: 7,
+            agosto: 8,
+            setembro: 9,
+            outubro: 10,
+            novembro: 11,
+            dezembro: 12
         };
 
         for (const linha of linhas) {
@@ -50,45 +53,87 @@ export class DiaDeSorteParser extends BaseParser {
             const { data, dataIndex } = this.extrairData(colunas);
             if (!data) continue;
 
-            const numeros: number[] = [];
-            let mesSorte: number | null = null;
+            // Concurso fica imediatamente antes da data
+            const concursoIndex = dataIndex - 1;
 
-            // ✅ 1. Extrair os 7 números (posições 1 a 7 após a data)
-            for (let i = 1; i <= 7; i++) {
-                const colIndex = dataIndex + i;
-                if (colIndex < colunas.length) {
-                    const valor = colunas[colIndex]?.trim();
-                    if (valor) {
-                        const num = parseInt(valor);
-                        if (!isNaN(num) && num >= 1 && num <= 31) {
-                            numeros.push(num);
-                        }
-                    }
+            if (concursoIndex < 0) {
+                throw new Error(
+                    `DiaDeSorteParser: concurso não encontrado antes da data "${data}".`
+                );
+            }
+
+            const concursoValor = colunas[concursoIndex]?.trim();
+
+            if (!concursoValor || !/^\d+$/.test(concursoValor)) {
+                throw new Error(
+                    `DiaDeSorteParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}".`
+                );
+            }
+
+            const concurso = parseInt(concursoValor, 10);
+
+            if (!Number.isInteger(concurso) || concurso < 1) {
+                throw new Error(
+                    `DiaDeSorteParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}".`
+                );
+            }
+
+            const numeros: number[] = [];
+
+            // Dia de Sorte: 7 números de 1 a 31
+            for (let j = dataIndex + 1; j < dataIndex + 8; j++) {
+                const valor = colunas[j]?.trim();
+
+                if (valor === '' || valor === undefined) continue;
+
+                const num = parseInt(valor);
+
+                if (!isNaN(num) && num >= 1 && num <= 31) {
+                    numeros.push(num);
                 }
             }
 
-            // ✅ 2. Extrair o mês (posição 8 após a data)
+            // Mês da Sorte fica imediatamente após os 7 números
             const mesIndex = dataIndex + 8;
-            if (mesIndex < colunas.length) {
-                const valorMes = colunas[mesIndex]?.trim();
-                if (valorMes) {
-                    const num = parseInt(valorMes);
-                    if (!isNaN(num) && num >= 1 && num <= 12) {
-                        mesSorte = num;
-                    } else {
-                        mesSorte = mesesMap[valorMes.toUpperCase()] ?? null;
-                    }
+            const mesValor = colunas[mesIndex]?.trim() || '';
+
+            let mesSorte: number | null = null;
+
+            if (/^\d+$/.test(mesValor)) {
+                const mes = parseInt(mesValor, 10);
+
+                if (mes >= 1 && mes <= 12) {
+                    mesSorte = mes;
+                }
+            } else {
+                const mesNormalizado = mesValor
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '');
+
+                if (meses[mesNormalizado] !== undefined) {
+                    mesSorte = meses[mesNormalizado];
                 }
             }
 
             if (numeros.length >= 7) {
-                const numerosOrdenados = numeros.slice(0, 7).sort((a, b) => a - b);
+                const numerosOrdenados = numeros
+                    .slice(0, 7)
+                    .sort((a, b) => a - b);
+
+                concursos.push(concurso);
                 dados.push(numerosOrdenados);
                 datas.push(data);
+
                 dadosExtras.push(mesSorte);
             }
         }
 
-        return { dados, datas, dadosExtras };
+        return {
+            concursos,
+            dados,
+            datas,
+            dadosExtras
+        };
     }
 }
