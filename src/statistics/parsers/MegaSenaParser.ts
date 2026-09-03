@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/MegaSenaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA MEGA-SENA
+// PARSER ESPECÍFICO PARA MEGA-SENA 03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -17,7 +17,11 @@ export class MegaSenaParser extends BaseParser {
     }
 
     parse(texto: string): ParseResult {
-        const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
+        const linhas = texto
+            .split('\n')
+            .filter(l => l.trim() && !l.startsWith('Data'));
+
+        const concursos: number[] = [];
         const dados: number[][] = [];
         const datas: string[] = [];
 
@@ -34,16 +38,51 @@ export class MegaSenaParser extends BaseParser {
             const { data, dataIndex } = this.extrairData(colunas);
             if (!data) continue;
 
+            // ============================================
+            // CONCURSO
+            // ============================================
+
+            const concursoIndex = dataIndex - 1;
+
+            if (concursoIndex < 0) {
+                throw new Error(
+                    'MegaSenaParser: coluna de concurso não encontrada antes da data.'
+                );
+            }
+
+            const concursoValor = colunas[concursoIndex]?.trim();
+
+            if (!concursoValor || !/^\d+$/.test(concursoValor)) {
+                throw new Error(
+                    `MegaSenaParser: número do concurso inválido: "${concursoValor ?? ''}".`
+                );
+            }
+
+            const concurso = parseInt(concursoValor, 10);
+
+            if (!Number.isInteger(concurso) || concurso < 1) {
+                throw new Error(
+                    `MegaSenaParser: número do concurso inválido: "${concursoValor}".`
+                );
+            }
+
             const numeros: number[] = [];
+
+            // ============================================
+            // NÚMEROS DA MEGA-SENA
+            // ============================================
 
             // Mega-Sena: números de 1 a 60
             for (let j = dataIndex + 1; j < colunas.length; j++) {
                 let valor = colunas[j]?.trim();
+
                 if (valor === '' || valor === undefined) continue;
 
                 let num = parseInt(valor);
+
                 if (isNaN(num)) {
                     const numStr = valor.toString().trim();
+
                     if (/^\d+$/.test(numStr)) {
                         num = parseInt(numStr);
                     } else {
@@ -56,14 +95,25 @@ export class MegaSenaParser extends BaseParser {
                 }
             }
 
-            // ✅ Mega-Sena: ORDENAR os números
+            // ============================================
+            // RESULTADO
+            // ============================================
+
             if (numeros.length >= 6) {
-                const numerosOrdenados = numeros.slice(0, 6).sort((a, b) => a - b);
+                const numerosOrdenados = numeros
+                    .slice(0, 6)
+                    .sort((a, b) => a - b);
+
+                concursos.push(concurso);
                 dados.push(numerosOrdenados);
                 datas.push(data);
             }
         }
 
-        return { dados, datas };
+        return {
+            concursos,
+            dados,
+            datas
+        };
     }
 }
