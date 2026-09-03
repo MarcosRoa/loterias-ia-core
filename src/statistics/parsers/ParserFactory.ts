@@ -1,11 +1,11 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/ParserFactory.ts
 // ============================================
-// FÁBRICA DE PARSERS - VERSÃO COMPLETA
+// FACTORY DOS PARSERS DE LOTERIAS  03/09/2026
 // ============================================
 
 import { BaseParser } from './BaseParser';
-import { SuperSeteParser } from './SuperSeteParser';
+
 import { MegaSenaParser } from './MegaSenaParser';
 import { QuinaParser } from './QuinaParser';
 import { LotofacilParser } from './LotofacilParser';
@@ -14,37 +14,51 @@ import { DuplasenaParser } from './DuplasenaParser';
 import { TimemaniaParser } from './TimemaniaParser';
 import { MilionariaParser } from './MilionariaParser';
 import { DiaDeSorteParser } from './DiaDeSorteParser';
+import { SuperSeteParser } from './SuperSeteParser';
+import { LotecaParser } from './LotecaParser';
 
 export class ParserFactory {
-    static create(lottery: string): BaseParser {
-        switch (lottery) {
-            // LOTERIAS COM DADOS EXTRAS (POSICIONAIS)
+    static create(lotteryType: string): BaseParser {
+        switch (lotteryType.toLowerCase()) {
             case 'supersete':
-                return new SuperSeteParser(); // ← NÃO ORDENA!
+                return new SuperSeteParser();
 
-            // LOTERIAS COM DADOS EXTRAS (NÃO POSICIONAIS)
             case 'timemania':
-                return new TimemaniaParser(); // ← ORDENA + TIME
-            case 'milionaria':
-                return new MilionariaParser(); // ← ORDENA + TREVOS
-            case 'diadesorte':
-                return new DiaDeSorteParser(); // ← ORDENA + MÊS
+                return new TimemaniaParser();
 
-            // LOTERIAS SEM DADOS EXTRAS (ORDENAM)
+            case 'milionaria':
+            case '+milionaria':
+                return new MilionariaParser();
+
+            case 'diadesorte':
+            case 'dia-de-sorte':
+                return new DiaDeSorteParser();
+
             case 'megasena':
-                return new MegaSenaParser(); // ← ORDENA
+            case 'mega-sena':
+                return new MegaSenaParser();
+
             case 'quina':
-                return new QuinaParser(); // ← ORDENA
+                return new QuinaParser();
+
             case 'lotofacil':
-                return new LotofacilParser(); // ← ORDENA
+            case 'lotofácil':
+                return new LotofacilParser();
+
             case 'lotomania':
-                return new LotomaniaParser(); // ← ORDENA (inclui 00)
+                return new LotomaniaParser();
+
             case 'duplasena':
-                return new DuplasenaParser(); // ← ORDENA (6 + 2º sorteio)
+            case 'dupla-sena':
+                return new DuplasenaParser();
+
+            case 'loteca':
+                return new LotecaParser();
 
             default:
-                // Fallback: ordena os números
-                return new MegaSenaParser();
+                throw new Error(
+                    `ParserFactory: tipo de loteria não suportado: "${lotteryType}".`
+                );
         }
     }
 }
