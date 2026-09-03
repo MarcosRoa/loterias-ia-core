@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/SuperSeteParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA SUPER SETE
+// PARSER ESPECÍFICO PARA SUPER SETE  03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -12,7 +12,7 @@ export class SuperSeteParser extends BaseParser {
             maxNumero: 9,
             incluirZero: true,
             numerosPadrao: 7,
-            manterOrdem: true // ← SUPER SETE NÃO ORDENA!
+            manterOrdem: true // ← SUPER SETE: PRESERVA A ORDEM DAS COLUNAS
         });
     }
 
@@ -20,6 +20,7 @@ export class SuperSeteParser extends BaseParser {
         const linhas = texto.split('\n').filter(l => l.trim() && !l.startsWith('Data'));
         const dados: number[][] = [];
         const datas: string[] = [];
+        const concursos: number[] = [];
 
         const sep = this.detectarSeparador(linhas);
 
@@ -34,37 +35,60 @@ export class SuperSeteParser extends BaseParser {
             const { data, dataIndex } = this.extrairData(colunas);
             if (!data) continue;
 
+            // Concurso fica imediatamente antes da data
+            const concursoIndex = dataIndex - 1;
+
+            if (concursoIndex < 0) {
+                throw new Error(
+                    `SuperSeteParser: concurso não encontrado antes da data "${data}".`
+                );
+            }
+
+            const concursoValor = colunas[concursoIndex]?.trim();
+
+            if (!concursoValor || !/^\d+$/.test(concursoValor)) {
+                throw new Error(
+                    `SuperSeteParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}".`
+                );
+            }
+
+            const concurso = parseInt(concursoValor, 10);
+
+            if (!Number.isInteger(concurso) || concurso < 1) {
+                throw new Error(
+                    `SuperSeteParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}".`
+                );
+            }
+
             const numeros: number[] = [];
 
-            // ✅ SUPER SETE: Manter a ordem original (POSICIONAL)
-            // As 7 colunas após a data são os números
-            for (let j = dataIndex + 1; j < colunas.length && j <= dataIndex + 7; j++) {
-                let valor = colunas[j]?.trim();
+            // Super Sete: exatamente 7 colunas, valores de 0 a 9.
+            // A ordem das colunas deve ser preservada.
+            for (let j = dataIndex + 1; j < dataIndex + 8; j++) {
+                const valor = colunas[j]?.trim();
+
                 if (valor === '' || valor === undefined) continue;
 
-                let num = parseInt(valor);
-                if (isNaN(num)) {
-                    const numStr = valor.toString().trim();
-                    if (/^\d+$/.test(numStr)) {
-                        num = parseInt(numStr);
-                    } else {
-                        continue;
-                    }
-                }
+                if (!/^\d+$/.test(valor)) continue;
 
-                // ✅ Super Sete: números de 0 a 9 (incluir zero)
+                const num = parseInt(valor, 10);
+
                 if (num >= 0 && num <= 9) {
                     numeros.push(num);
                 }
             }
 
-            // ✅ SUPER SETE: NÃO ORDENAR! Manter a ordem original
             if (numeros.length === 7) {
-                dados.push(numeros); // ← SEM SORT!
+                concursos.push(concurso);
+                dados.push(numeros);
                 datas.push(data);
             }
         }
 
-        return { dados, datas };
+        return {
+            concursos,
+            dados,
+            datas
+        };
     }
 }
