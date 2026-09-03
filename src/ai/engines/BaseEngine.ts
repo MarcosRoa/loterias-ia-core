@@ -232,20 +232,20 @@ export abstract class BaseEngine {
                 );
             }
 
-            const peso = registro.peso;
+            const score = registro.score;
 
             if (
-                typeof peso !== 'number' ||
-                !Number.isFinite(peso)
+                typeof score !== 'number' ||
+                !Number.isFinite(score)
             ) {
                 throw new Error(
-                    `Peso inválido retornado pelo CandidatePool para o número ${numero}`
+                    `Score inválido retornado pelo CandidatePool para o número ${numero}`
                 );
             }
-
+            
             return {
                 numero,
-                score: peso
+                score
             };
         });
 
