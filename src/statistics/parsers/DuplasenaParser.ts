@@ -40,7 +40,7 @@ export class DuplasenaParser extends BaseParser {
 
             if (concursoIndex < 0) {
                 throw new Error(
-                    `DuplasenaParser: concurso não encontrado antes da data "${data}".`
+                    DuplasenaParser: concurso não encontrado antes da data "${data}"
                 );
             }
 
@@ -48,7 +48,7 @@ export class DuplasenaParser extends BaseParser {
 
             if (!concursoValor || !/^\d+$/.test(concursoValor)) {
                 throw new Error(
-                    `DuplasenaParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}".`
+                    DuplasenaParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}"
                 );
             }
 
@@ -56,7 +56,7 @@ export class DuplasenaParser extends BaseParser {
 
             if (!Number.isInteger(concurso) || concurso < 1) {
                 throw new Error(
-                    `DuplasenaParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}".`
+                    DuplasenaParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}"
                 );
             }
 
