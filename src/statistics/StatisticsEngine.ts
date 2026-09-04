@@ -48,7 +48,7 @@ export class StatisticsEngine {
             };
         }
 
-        const { dados, datas, config, dadosExtras } = context;
+        const { concursos, dados, datas, config, dadosExtras } = context;
 
         if (dados.length === 0) {
             return {
