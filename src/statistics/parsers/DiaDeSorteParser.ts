@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/DiaDeSorteParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA DIA DE SORTE  03/09/2026
+// PARSER ESPECÍFICO PARA DIA DE SORTE 03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
