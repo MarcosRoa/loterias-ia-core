@@ -247,6 +247,7 @@ class IAOrchestrator {
       if (history && history.length > 0) {
         console.log(`   Usando history do frontend: ${history.length} concursos`);
         dataset = {
+          concursos: [],
           dados: history,
           dadosExtras: params.dadosExtras || [],
           datas: [],
