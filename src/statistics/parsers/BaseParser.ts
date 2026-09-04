@@ -1,5 +1,5 @@
 // ============================================
-// CAMINHO: src/statistics/parsers/BaseParser.ts 
+// CAMINHO: src/statistics/parsers/BaseParser.ts
 // ============================================ 
 // CLASSE BASE PARA TODOS OS PARSERS 03/09/2026
 // ============================================
