@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/LotomaniaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA LOTOMANIA  03/09/2026
+// PARSER ESPECÍFICO PARA LOTOMANIA 03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
