@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/DuplasenaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA DUPLA SENA  03/09/2026
+// PARSER ESPECÍFICO PARA DUPLA SENA 03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
