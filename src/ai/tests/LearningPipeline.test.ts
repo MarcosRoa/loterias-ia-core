@@ -498,16 +498,16 @@ export function executarTesteLearningPipeline(
     // ========================================================
 
     const metrics =
-        resultado.metricas;
+        resultado.metrics;
 
     const avaliacao =
-        resultado.avaliacaoFatores;
+        resultado.factors;
 
     const estado =
-        resultado.estado;
+        resultado.state;
 
     const pesosDepois =
-        resultado.pesos;
+        resultado.learning.pesosNovos;
 
     console.log('');
     console.log('------------------------------------------------------------');
@@ -795,7 +795,7 @@ function validarResultadoFinal(
         );
     }
 
-    if (!resultado.metricas) {
+    if (!resultado.metrics) {
         throw new Error(
             '[LearningPipelineTest] Métricas ausentes.'
         );
@@ -803,9 +803,9 @@ function validarResultadoFinal(
 
     if (
         !Number.isInteger(
-            resultado.metricas.totalTestes
+            resultado.metrics.totalTestes
         ) ||
-        resultado.metricas.totalTestes <= 0
+        resultado.metrics.totalTestes <= 0
     ) {
         throw new Error(
             '[LearningPipelineTest] Nenhum teste de backtesting foi executado.'
@@ -813,7 +813,7 @@ function validarResultadoFinal(
     }
 
     if (!Number.isFinite(
-        resultado.metricas.mediaAcertos
+        resultado.metrics.mediaAcertos
     )) {
         throw new Error(
             '[LearningPipelineTest] Média de acertos inválida.'
@@ -821,14 +821,14 @@ function validarResultadoFinal(
     }
 
     if (!Number.isFinite(
-        resultado.metricas.baselineMedia
+        resultado.metrics.baselineMedia
     )) {
         throw new Error(
             '[LearningPipelineTest] Baseline inválido.'
         );
     }
 
-    if (!resultado.avaliacaoFatores) {
+    if (!resultado.factors) {
         throw new Error(
             '[LearningPipelineTest] Avaliação dos fatores ausente.'
         );
@@ -836,7 +836,7 @@ function validarResultadoFinal(
 
     if (
         !Array.isArray(
-            resultado.avaliacaoFatores.fatores
+            resultado.factors.fatores
         )
     ) {
         throw new Error(
@@ -845,21 +845,21 @@ function validarResultadoFinal(
     }
 
     if (
-        resultado.avaliacaoFatores.fatores.length === 0
+        resultado.factors.fatores.length === 0
     ) {
         throw new Error(
             '[LearningPipelineTest] Nenhum fator foi avaliado.'
         );
     }
 
-    if (!resultado.estado) {
+    if (!resultado.state) {
         throw new Error(
             '[LearningPipelineTest] Estado adaptativo ausente.'
         );
     }
 
     if (
-        resultado.estado.ciclo < 1
+        resultado.state.ciclo < 1
     ) {
         throw new Error(
             '[LearningPipelineTest] Estado não registrou o ciclo.'
@@ -867,21 +867,21 @@ function validarResultadoFinal(
     }
 
     if (!Number.isFinite(
-        resultado.estado.estabilidade
+        resultado.state.estabilidade
     )) {
         throw new Error(
             '[LearningPipelineTest] Estabilidade inválida.'
         );
     }
 
-    if (!resultado.pesos) {
+    if (!resultado.learning?.pesosNovos) {
         throw new Error(
             '[LearningPipelineTest] Pesos não retornados.'
         );
     }
 
     for (const [nome, peso] of Object.entries(
-        resultado.pesos
+        resultado.learning.pesosNovos
     )) {
 
         if (!Number.isFinite(peso)) {
@@ -911,7 +911,7 @@ function validarResultadoFinal(
     }
 
     if (
-        resultado.metricas.totalTestes <
+        resultado.metrics.totalTestes <
         1
     ) {
         throw new Error(
