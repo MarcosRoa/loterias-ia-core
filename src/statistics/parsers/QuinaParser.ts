@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/QuinaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA QUINA 03/09/2026
+// PARSER ESPECÍFICO PARA QUINA  03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
