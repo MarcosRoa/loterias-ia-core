@@ -57,7 +57,7 @@ export class MilionariaParser extends BaseParser {
 
             if (!Number.isInteger(concurso) || concurso < 1) {
                 throw new Error(
-                    `MilionariaParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}"
+                    MilionariaParser: número de concurso inválido na linha com data "${data}". Valor: "${concursoValor}"
                 );
             }
 
