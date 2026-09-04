@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/MilionariaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA +MILIONÁRIA  03/09/2026 
+// PARSER ESPECÍFICO PARA +MILIONÁRIA 03/09/2026 
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
