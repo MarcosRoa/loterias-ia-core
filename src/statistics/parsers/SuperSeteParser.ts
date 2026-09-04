@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/SuperSeteParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA SUPER SETE  03/09/2026
+// PARSER ESPECÍFICO PARA SUPER SETE   03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
