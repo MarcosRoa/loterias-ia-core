@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/LotofacilParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA LOTOFÁCIL 03/09/2026
+// PARSER ESPECÍFICO PARA LOTOFÁCIL  03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
