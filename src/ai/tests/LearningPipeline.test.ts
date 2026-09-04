@@ -1,8 +1,8 @@
 // ============================================================
-// src/ai/tests/LearningPipeline.integration.ts
+// src/ai/tests/LearningPipeline.test.ts
 // ============================================================
 // ============================================================
-// TESTE DE INTEGRAÇÃO - LEARNING PIPELINE  03/09/2026
+// TESTE DE INTEGRAÇÃO - LEARNING PIPELINE  04/09/2026
 // ============================================================
 //
 // IMPORTANTE:
@@ -13,7 +13,7 @@
 // Não altera ScoreNormalizer.
 // Não altera a geração de jogos.
 //
-// Fluxo testado:
+// Fluxo testado (walk-forward do modelo):
 //
 // HISTÓRICO
 //    ↓
@@ -327,6 +327,18 @@ export function executarTesteLearningPipeline(
                 FactorEvaluationInput[]
             > = {};
 
+            const numerosPrevistosSet =
+                new Set(numerosPrevistos);
+
+            if (
+                numerosPrevistosSet.size !==
+                numerosPrevistos.length
+            ) {
+                throw new Error(
+                    '[LearningPipelineTest] numerosPrevistos contém duplicados.'
+                );
+            }
+
             const nomesFatores = [
                 'frequencia',
                 'tendenciaFrequencia',
@@ -346,7 +358,10 @@ export function executarTesteLearningPipeline(
 
                 fatores[nomeFator] = [];
 
-                for (const numero of numerosPrevistos) {
+                const numerosElegiveis =
+                    features.map(feature => feature.numero);
+
+                for (const numero of numerosElegiveis) {
 
                     const feature =
                         featureMap.get(numero);
