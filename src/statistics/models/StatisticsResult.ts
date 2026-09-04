@@ -30,6 +30,7 @@ export interface StatisticsResult {
 }
 
 export interface LotteryContext {
+    concursos: number[];
     dados: number[][];
     datas: string[];
     dadosExtras?: any[];
