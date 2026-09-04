@@ -41,7 +41,7 @@ export class MilionariaParser extends BaseParser {
 
             if (concursoIndex < 0) {
                 throw new Error(
-                    "MilionariaParser: concurso não encontrado antes da data "${data}"
+                    MilionariaParser: concurso não encontrado antes da data "${data}"
                 );
             }
 
@@ -49,7 +49,7 @@ export class MilionariaParser extends BaseParser {
 
             if (!concursoValor || !/^\d+$/.test(concursoValor)) {
                 throw new Error(
-                    "MilionariaParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}"
+                    MilionariaParser: concurso inválido na linha com data "${data}". Valor encontrado: "${concursoValor}"
                 );
             }
 
