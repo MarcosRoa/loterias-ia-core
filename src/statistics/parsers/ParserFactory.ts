@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/ParserFactory.ts
 // ============================================
-// FACTORY DOS PARSERS DE LOTERIAS  03/09/2026
+// FACTORY DOS PARSERS DE LOTERIAS   03/09/2026
 // ============================================
 
 import { BaseParser } from './BaseParser';
