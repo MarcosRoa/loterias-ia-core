@@ -1,4 +1,3 @@
-```ts
 // ============================================
 // CAMINHO: src/statistics/parsers/LotecaParser.ts
 // ============================================
@@ -110,4 +109,3 @@ export class LotecaParser extends BaseParser {
         };
     }
 }
-```
