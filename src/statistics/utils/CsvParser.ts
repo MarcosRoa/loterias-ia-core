@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/utils/CsvParser.ts
 // ============================================
-// PARSER DE CSV - VERSÃO REFATORADA COM FACTORY
+// PARSER DE CSV - VERSÃO REFATORADA COM FACTORY 03/09/2026
 // ============================================
 
 import fs from 'fs';
@@ -45,6 +45,7 @@ export class CsvParser {
             const dadosExtras = result.dadosExtras || [];
 
             return {
+                concursos: result.concursos,
                 dados: result.dados,
                 datas: result.datas,
                 dadosExtras,
