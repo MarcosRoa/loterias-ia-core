@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/TimemaniaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA TIMEMANIA  03/09/2026
+// PARSER ESPECÍFICO PARA TIMEMANIA   03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
