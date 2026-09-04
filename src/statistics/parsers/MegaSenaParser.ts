@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/MegaSenaParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA MEGA-SENA 03/09/2026
+// PARSER ESPECÍFICO PARA MEGA-SENA  03/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
