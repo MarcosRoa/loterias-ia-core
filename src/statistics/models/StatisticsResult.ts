@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/models/StatisticsResult.ts
 // ============================================
-// TIPOS PARA RESULTADOS DE ESTATÍSTICAS (CORRIGIDO)
+// TIPOS PARA RESULTADOS DE ESTATÍSTICAS 03/09/2026
 // ============================================
 
 export interface StatisticsResult {
