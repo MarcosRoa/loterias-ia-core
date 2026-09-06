@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/engines/PredictiveEngine.ts
-// DATA CRIAÇÃO: 2026-01-20
+// DATA CRIAÇÃO: 06/09/2026
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.2.0
 // ============================================
@@ -32,6 +32,7 @@ import {
     AdaptiveBrain,
     AdaptiveBrainConfig
 } from '../services/AdaptiveBrain';
+import { AdaptiveWeights } from '../services/AdaptiveWeights';
 
 // ============================================
 // SEÇÃO 2: PREDICTIVE ENGINE
@@ -278,9 +279,20 @@ export class PredictiveEngine extends BaseEngine {
             recentWindow: 20
         };
 
+        const lotteryType = this.config.lotteryType;
+
+        if (!lotteryType || typeof lotteryType !== 'string') {
+            throw new Error(
+                '[PredictiveEngine] lotteryType não definido na configuração da engine.'
+            );
+        }
+
+        const pesos = AdaptiveWeights.getPesos(lotteryType);
+
         this.adaptiveBrain = new AdaptiveBrain(
             this.dados,
-            brainConfig
+            brainConfig,
+            pesos
         );
     }
 
@@ -432,7 +444,7 @@ export class PredictiveEngine extends BaseEngine {
      * Retorna os parâmetros estruturais atuais
      * utilizados pelo PredictiveEngine.
      */
-        /**
+    /**
      * Retorna os parâmetros estruturais atuais
      * utilizados pelo PredictiveEngine.
      */
