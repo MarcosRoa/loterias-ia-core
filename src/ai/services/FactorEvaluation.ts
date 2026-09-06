@@ -2,7 +2,7 @@
 // src/ai/services/FactorEvaluation.ts
 // ============================================
 // ============================================
-// FACTOR EVALUATION  03/09/2026
+// FACTOR EVALUATION  04/09/2026
 // ============================================
 // Avalia individualmente os fatores utilizados
 // pelo sistema preditivo.
@@ -142,17 +142,35 @@ export class FactorEvaluation {
                 : 0;
 
         /*
-         * Desempenho combina:
+         * Desempenho baseado exclusivamente na capacidade
+         * de ordenação do fator entre positivos e negativos.
          *
-         * - capacidade de discriminação;
-         * - taxa observada de acerto.
+         * Utilizamos AUC (Area Under the ROC Curve) e a
+         * transformamos para a escala [-1, 1]:
          *
-         * O valor final é limitado a [-1, 1].
+         *   desempenho = 2 * AUC - 1
+         *
+         * Interpretação:
+         *   +1 → o fator ordena perfeitamente os positivos acima
+         *         dos negativos;
+         *    0 → o fator não apresenta poder discriminativo;
+         *   -1 → o fator ordena sistematicamente os negativos acima
+         *         dos positivos.
+         *
+         * AUC é invariante à escala dos scores e não depende da
+         * proporção de positivos como sinal de qualidade. A taxa
+         * de acerto continua sendo mantida apenas como estatística
+         * descritiva.
          */
+        const auc =
+            this.calcularAuc(
+                scoresPositivos,
+                scoresNegativos
+            );
+
         const desempenho =
             this.clamp(
-                discriminacao * 0.7 +
-                ((taxaAcerto * 2) - 1) * 0.3,
+                (2 * auc) - 1,
                 -1,
                 1
             );
@@ -167,6 +185,117 @@ export class FactorEvaluation {
             discriminacao,
             desempenho
         };
+    }
+
+    /**
+     * Calcula a AUC comparando os scores positivos e negativos.
+     *
+     * Para cada par (positivo, negativo):
+     * - positivo maior → 1 ponto;
+     * - empate → 0.5 ponto;
+     * - positivo menor → 0 ponto.
+     *
+     * A média desses resultados é a AUC.
+     */
+    private calcularAuc(
+        scoresPositivos: number[],
+        scoresNegativos: number[]
+    ): number {
+        const positivos = scoresPositivos.length;
+        const negativos = scoresNegativos.length;
+
+        // Sem as duas classes, não é possível calcular AUC.
+        // Mantemos a semântica atual: resultado neutro.
+        if (positivos === 0 || negativos === 0) {
+            return 0.5;
+        }
+
+        /**
+         * AUC pelo método de ranks.
+         *
+         * É matematicamente equivalente ao cálculo anterior,
+         * que comparava cada positivo com cada negativo:
+         *
+         *   positivo > negativo  => 1
+         *   positivo === negativo => 0.5
+         *   positivo < negativo  => 0
+         *
+         * Complexidade anterior:
+         *   O(P × N)
+         *
+         * Complexidade atual:
+         *   O((P + N) log(P + N))
+         *
+         * Isso evita o custo quadrático do cálculo anterior.
+         */
+
+        const observacoes = [
+            ...scoresPositivos.map(score => ({
+                score,
+                positivo: true
+            })),
+            ...scoresNegativos.map(score => ({
+                score,
+                positivo: false
+            }))
+        ];
+
+        observacoes.sort((a, b) => a.score - b.score);
+
+        let somaRanksPositivos = 0;
+        let inicioGrupo = 0;
+
+        while (inicioGrupo < observacoes.length) {
+            const scoreAtual = observacoes[inicioGrupo].score;
+
+            let fimGrupo = inicioGrupo + 1;
+
+            while (
+                fimGrupo < observacoes.length &&
+                observacoes[fimGrupo].score === scoreAtual
+            ) {
+                fimGrupo++;
+            }
+
+            /**
+             * Rank médio do grupo empatado.
+             *
+             * Os ranks são 1-based:
+             * início = inicioGrupo + 1
+             * fim    = fimGrupo
+             */
+            const rankMedio =
+                ((inicioGrupo + 1) + fimGrupo) / 2;
+
+            for (let i = inicioGrupo; i < fimGrupo; i++) {
+                if (observacoes[i].positivo) {
+                    somaRanksPositivos += rankMedio;
+                }
+            }
+
+            inicioGrupo = fimGrupo;
+        }
+
+        /**
+         * Fórmula da AUC baseada em ranks:
+         *
+         * AUC =
+         *   (somaRanksPositivos - P(P+1)/2)
+         *   ----------------------------------
+         *              P × N
+         *
+         * O tratamento de empates pelo rank médio
+         * mantém exatamente a regra anterior de
+         * empate = 0.5.
+         */
+        const auc =
+            (
+                somaRanksPositivos -
+                (positivos * (positivos + 1)) / 2
+            ) /
+            (positivos * negativos);
+
+        return auc;
     }
 
     /**
