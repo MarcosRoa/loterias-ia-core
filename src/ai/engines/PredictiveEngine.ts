@@ -2,14 +2,16 @@
 // CAMINHO: src/ai/engines/PredictiveEngine.ts
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 2.1.0 (VERSÃO REVISADA)
+// VERSÃO: 2.2.0
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
 // SEÇÃO 2: PREDICTIVE ENGINE
 // SEÇÃO 3: MÉTODO GERAR JOGOS
-// SEÇÃO 4: CÁLCULO DE SCORES
-// SEÇÃO 5: EXPORTS
+// SEÇÃO 4: CONFIGURAÇÃO DO CÉREBRO
+// SEÇÃO 5: MÉTODOS DE VALIDAÇÃO
+// SEÇÃO 6: CONFIGURAÇÃO
+// SEÇÃO 7: EXPORTS
 // ============================================
 
 // ============================================
@@ -20,15 +22,16 @@ import {
     BaseEngine,
     EngineConfig,
     EngineExtras,
-    EngineResult, 
+    EngineResult,
     JogoGerado
 } from './BaseEngine';
 
-import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
-import { DelayAnalyzer } from '../analysis/DelayAnalyzer';
-import { PatternAnalyzer } from '../analysis/PatternAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
+import {
+    AdaptiveBrain,
+    AdaptiveBrainConfig
+} from '../services/AdaptiveBrain';
 
 // ============================================
 // SEÇÃO 2: PREDICTIVE ENGINE
@@ -36,37 +39,57 @@ import { ScoreItem } from '../types';
 
 /**
  * Motor de IA Preditiva ⭐ PRO
- * 
+ *
  * Responsabilidade:
- * - Detectar padrões históricos
- * - Tentar prever os próximos números
- * - Foco em tendências e repetições
- * 
+ * - Detectar evidências estatísticas históricas
+ * - Calcular ranking preditivo adaptativo
+ * - Utilizar o AdaptiveBrain como camada de inteligência
+ * - Delegar a seleção final para o BaseEngine
+ *
  * Fluxo:
- * 1. Obtém dados de frequência, atraso e padrões
- * 2. Calcula score com ênfase em padrões (determinístico)
- * 3. Chama selecionarNumeros() da BaseEngine
- * 4. Retorna jogos com explicações
- * 
+ *
+ * Dados históricos
+ *       ↓
+ * AdaptiveBrain
+ *       ↓
+ * FeatureEngineering
+ *       ↓
+ * PredictiveScoring
+ *       ↓
+ * Scores
+ *       ↓
+ * BaseEngine.selecionarNumeros()
+ *       ↓
+ * CandidatePool
+ *       ↓
+ * WeightedSelectionStrategy
+ *       ↓
+ * DiversificationService
+ *       ↓
+ * Jogos
+ *
  * Características:
  * - Exclusivo para assinantes PRO
  * - Requer mínimo de 30 concursos
- * - Ênfase em padrões detectados
- * - Score é determinístico (não depende de seed)
- * 
+ * - Score determinístico
+ * - Sem aleatoriedade no cálculo dos scores
+ * - Aleatoriedade somente na etapa de seleção
+ *
  * @throws Error se dados forem insuficientes ou dependências não inicializadas
- * 
- * @example
- * ```typescript
- * const engine = new PredictiveEngine(dados, config, true, extras);
- * const result = engine.gerarJogos(5, 12345);
- * ```
  */
 export class PredictiveEngine extends BaseEngine {
+
     /**
      * Calculadora de confiança
      */
     private confidenceCalc: ConfidenceCalculator;
+
+    /**
+     * Cérebro adaptativo responsável pelo ranking.
+     *
+     * A geração de jogos continua pertencendo ao Engine/BaseEngine.
+     */
+    private adaptiveBrain: AdaptiveBrain | null = null;
 
     /**
      * Número mínimo de concursos para operar
@@ -74,26 +97,12 @@ export class PredictiveEngine extends BaseEngine {
     private readonly MIN_DRAWS = 30;
 
     /**
-     * Pesos para o cálculo do score
-     * 
-     * A Predictive Engine dá ênfase a padrões:
-     * - Padrão: 50% (principal fator)
-     * - Frequência: 25%
-     * - Atraso: 25%
-     */
-    private weights = {
-        padrao: 0.50,
-        frequencia: 0.25,
-        atraso: 0.25
-    };
-
-    /**
-     * Número de padrões a considerar
+     * Número de padrões a considerar pelo cérebro
      */
     private topPatternsCount: number = 10;
 
     /**
-     * Quantos números gerar por padrão
+     * Quantos números considerar por padrão
      */
     private numbersPerPattern: number = 5;
 
@@ -104,8 +113,9 @@ export class PredictiveEngine extends BaseEngine {
         extras?: EngineExtras
     ) {
         super(dados, config, isPro, extras);
+
         this.confidenceCalc = new ConfidenceCalculator();
-        
+
         // Validação inicial
         this.validarDependencias();
         this.validarPro();
@@ -120,17 +130,23 @@ export class PredictiveEngine extends BaseEngine {
     }
 
     getDescricao(): string {
-        return 'Detecta padrões e tenta prever os próximos números';
+        return 'Detecta padrões e calcula ranking preditivo adaptativo';
     }
 
     isDisponivel(): boolean {
         return this.isPro;
     }
 
-    gerarJogos(quantidade: number, seed: number, params: any = {}): EngineResult {
+    gerarJogos(
+        quantidade: number,
+        seed: number,
+        params: any = {}
+    ): EngineResult {
+
         // ============================================
         // VALIDAÇÕES EXPLÍCITAS - SEM FALLBACK
         // ============================================
+
         this.validarPro();
         this.validarContexto();
         this.validarQuantidade(quantidade);
@@ -139,38 +155,50 @@ export class PredictiveEngine extends BaseEngine {
         // ============================================
         // PARÂMETROS
         // ============================================
+
         if (params.topPatternsCount !== undefined) {
-            this.topPatternsCount = params.topPatternsCount;
+            this.setTopPatternsCount(params.topPatternsCount);
         }
+
         if (params.numbersPerPattern !== undefined) {
-            this.numbersPerPattern = params.numbersPerPattern;
+            this.setNumbersPerPattern(params.numbersPerPattern);
         }
 
         // ============================================
-        // OBTÉM ANALISADORES COM VALIDAÇÃO
+        // INICIALIZA O ADAPTIVE BRAIN
         // ============================================
-        const frequency = this.obterFrequency();
-        const delay = this.obterDelay();
-        const patterns = this.obterPatterns();
+
+        this.inicializarAdaptiveBrain();
+
+        if (!this.adaptiveBrain) {
+            throw new Error(
+                '[PredictiveEngine] AdaptiveBrain não foi inicializado.'
+            );
+        }
 
         // ============================================
-        // CALCULA SCORES (DETERMINÍSTICO - SEM SEED)
+        // CALCULA SCORES
         // ============================================
-        const scores = this.calcularScores(frequency, delay, patterns);
+
+        const scores = this.calcularScores();
 
         // ============================================
         // GERA SEEDS DETERMINÍSTICAS
         // ============================================
+
         const seeds = this.gerarSeeds(quantidade, seed);
 
         // ============================================
         // GERA JOGOS
         // ============================================
+
         const jogos: JogoGerado[] = [];
         let jogosGerados: number[][] = [];
 
         for (let i = 0; i < quantidade; i++) {
-            // Seleciona números usando a nova arquitetura
+
+            // A seleção continua sendo responsabilidade
+            // do BaseEngine.
             const numeros = this.selecionarNumeros(
                 scores,
                 this.config.numerosPadrao,
@@ -178,12 +206,16 @@ export class PredictiveEngine extends BaseEngine {
                 jogosGerados
             );
 
-            // Cria o jogo
-            const jogo = this.criarJogo(numeros, seeds[i], [
-                '🔮 Baseado em padrões históricos',
-                '📊 Predição de tendências'
-            ]);
-            
+            // Cria o jogo mantendo o contrato existente
+            const jogo = this.criarJogo(
+                numeros,
+                seeds[i],
+                [
+                    '🔮 Ranking preditivo adaptativo',
+                    '📊 Análise estatística histórica'
+                ]
+            );
+
             jogos.push(jogo);
             jogosGerados.push(numeros);
         }
@@ -191,100 +223,105 @@ export class PredictiveEngine extends BaseEngine {
         // ============================================
         // CALCULA CONFIANÇA
         // ============================================
+
         const confianca = this.confidenceCalc.calcularCompleta(
             this.dados,
-            ['frequencia', 'atraso', 'padroes']
+            [
+                'frequencia',
+                'atraso',
+                'padroes'
+            ]
         );
+
+        // ============================================
+        // RESULTADO
+        // ============================================
 
         return {
             games: jogos,
-            confidence: Math.min(confianca.confianca + 5, 85),
+            confidence: Math.min(
+                confianca.confianca + 5,
+                85
+            ),
             engineName: this.getNome(),
             explanation: [
                 `🔮 ${this.dados.length} concursos analisados`,
                 `🎯 Confiança: ${(confianca.confianca + 5).toFixed(0)}%`,
-                `📊 ${this.topPatternsCount} padrões detectados`
+                `🧠 Ranking calculado pelo AdaptiveBrain`,
+                `📊 ${this.topPatternsCount} padrões considerados`
             ]
         };
     }
 
     // ============================================
-    // SEÇÃO 4: CÁLCULO DE SCORES
+    // SEÇÃO 4: CONFIGURAÇÃO DO CÉREBRO
     // ============================================
 
     /**
-     * Calcula scores preditivos para todos os números
-     * 
-     * ⚠️ Este método é DETERMINÍSTICO.
-     * A mesma entrada produz a mesma saída.
-     * A aleatoriedade é introduzida apenas na seleção.
-     * 
-     * @param frequency - Analisador de frequência
-     * @param delay - Analisador de atraso
-     * @param patterns - Analisador de padrões
-     * @returns Lista de scores
+     * Inicializa o AdaptiveBrain com os mesmos dados
+     * e configurações fundamentais utilizados pelo engine.
+     *
+     * Importante:
+     * - Não gera jogos
+     * - Não seleciona números
+     * - Não usa seed
+     * - Não utiliza aleatoriedade
+     * - Não altera banco de dados
      */
-    private calcularScores(
-        frequency: FrequencyAnalyzer,
-        delay: DelayAnalyzer,
-        patterns: PatternAnalyzer
-    ): ScoreItem[] {
-        const min = this.config.incluirZero ? 0 : 1;
-        const max = this.config.maxNumero;
-        const scores: ScoreItem[] = [];
+    private inicializarAdaptiveBrain(): void {
 
-        // ============================================
-        // OBTÉM NÚMEROS DOS MELHORES PADRÕES
-        // ============================================
-        const melhoresPadroes = patterns.getMelhoresPadroes(this.topPatternsCount);
-        const padroesNumeros = new Set<number>();
-        
-        for (const padrao of melhoresPadroes) {
-            const nums = patterns.gerarNumerosPorPadrao(
-                padrao,
-                this.numbersPerPattern,
-                max
+        const brainConfig: AdaptiveBrainConfig = {
+            maxNumero: this.config.maxNumero,
+            incluirZero: this.config.incluirZero,
+            topPatternsCount: this.topPatternsCount,
+            numbersPerPattern: this.numbersPerPattern,
+            recentWindow: 20
+        };
+
+        this.adaptiveBrain = new AdaptiveBrain(
+            this.dados,
+            brainConfig
+        );
+    }
+
+    /**
+     * Calcula os scores utilizando exclusivamente
+     * o AdaptiveBrain.
+     *
+     * O resultado mantém o contrato ScoreItem
+     * utilizado pelo BaseEngine.
+     */
+    private calcularScores(): ScoreItem[] {
+
+        if (!this.adaptiveBrain) {
+            throw new Error(
+                '[PredictiveEngine] AdaptiveBrain indisponível ao calcular scores.'
             );
-            for (const n of nums) {
-                padroesNumeros.add(n);
-            }
         }
 
-        // ============================================
-        // CALCULA SCORE PARA CADA NÚMERO
-        // ============================================
-        for (let i = min; i <= max; i++) {
-            // Obtém valores normalizados (0-1)
-            const freqScore = frequency.getFrequenciaNormalizada(i) / 100;
-            const delayScore = delay.getAtrasoNormalizado(i) / 100;
-            
-            // Score de padrão: 0.9 se está nos padrões, 0.1 caso contrário
-            const padraoScore = padroesNumeros.has(i) ? 0.9 : 0.1;
+        const scores = this.adaptiveBrain.calcularScores();
 
-            // Aplica pesos (soma = 1)
-            const score = (
-                padraoScore * this.weights.padrao +
-                freqScore * this.weights.frequencia +
-                delayScore * this.weights.atraso
+        if (!Array.isArray(scores) || scores.length === 0) {
+            throw new Error(
+                '[PredictiveEngine] AdaptiveBrain não retornou scores.'
             );
-
-            scores.push({
-                numero: i,
-                score: Math.max(0, Math.min(1, score)) // Garante [0, 1]
-            });
         }
 
-        return scores;
+        return scores.map(item => ({
+            numero: item.numero,
+            score: item.score
+        }));
     }
 
     // ============================================
-    // MÉTODOS DE VALIDAÇÃO
+    // SEÇÃO 5: MÉTODOS DE VALIDAÇÃO
     // ============================================
 
     /**
      * Valida dependências no construtor
      */
     private validarDependencias(): void {
+
         if (!this.dados) {
             throw new Error(
                 '[PredictiveEngine] Dados históricos não carregados.'
@@ -296,6 +333,7 @@ export class PredictiveEngine extends BaseEngine {
      * Valida se o usuário tem permissão PRO
      */
     private validarPro(): void {
+
         if (!this.isPro) {
             throw new Error(
                 '[PredictiveEngine] Motor exclusivo para assinantes PRO.'
@@ -307,6 +345,7 @@ export class PredictiveEngine extends BaseEngine {
      * Valida contexto antes de gerar jogos
      */
     private validarContexto(): void {
+
         if (!this.context) {
             throw new Error(
                 '[PredictiveEngine] StatisticsContext não foi inicializado. ' +
@@ -316,9 +355,11 @@ export class PredictiveEngine extends BaseEngine {
     }
 
     /**
-     * Valida quantidade de dados (mínimo 30 concursos)
+     * Valida quantidade de dados
+     * mínimo 30 concursos
      */
     private validarDadosSuficientes(): void {
+
         if (this.dados.length < this.MIN_DRAWS) {
             throw new Error(
                 `[PredictiveEngine] Dados insuficientes: ${this.dados.length} concursos. ` +
@@ -331,6 +372,7 @@ export class PredictiveEngine extends BaseEngine {
      * Valida quantidade de jogos
      */
     private validarQuantidade(quantidade: number): void {
+
         if (quantidade <= 0) {
             throw new Error(
                 `[PredictiveEngine] Quantidade inválida: ${quantidade}. ` +
@@ -347,134 +389,83 @@ export class PredictiveEngine extends BaseEngine {
     }
 
     // ============================================
-    // MÉTODOS DE OBTENÇÃO DE ANALISADORES
+    // SEÇÃO 6: CONFIGURAÇÃO
     // ============================================
 
     /**
-     * Obtém FrequencyAnalyzer com validação
-     */
-    private obterFrequency(): FrequencyAnalyzer {
-        if (!this.context) {
-            throw new Error(
-                '[PredictiveEngine] StatisticsContext indisponível ao obter FrequencyAnalyzer.'
-            );
-        }
-
-        if (!this.context.frequency) {
-            throw new Error(
-                '[PredictiveEngine] FrequencyAnalyzer não foi inicializado.'
-            );
-        }
-
-        return this.context.frequency;
-    }
-
-    /**
-     * Obtém DelayAnalyzer com validação
-     */
-    private obterDelay(): DelayAnalyzer {
-        if (!this.context) {
-            throw new Error(
-                '[PredictiveEngine] StatisticsContext indisponível ao obter DelayAnalyzer.'
-            );
-        }
-
-        if (!this.context.delay) {
-            throw new Error(
-                '[PredictiveEngine] DelayAnalyzer não foi inicializado.'
-            );
-        }
-
-        return this.context.delay;
-    }
-
-    /**
-     * Obtém PatternAnalyzer com validação
-     */
-    private obterPatterns(): PatternAnalyzer {
-        if (!this.context) {
-            throw new Error(
-                '[PredictiveEngine] StatisticsContext indisponível ao obter PatternAnalyzer.'
-            );
-        }
-
-        if (!this.context.patterns) {
-            throw new Error(
-                '[PredictiveEngine] PatternAnalyzer não foi inicializado.'
-            );
-        }
-
-        return this.context.patterns;
-    }
-
-    // ============================================
-    // MÉTODOS DE CONFIGURAÇÃO
-    // ============================================
-
-    /**
-     * Atualiza os pesos do score
-     * 
-     * Nota: A soma dos pesos deve ser 1
-     */
-    setWeights(weights: Partial<typeof this.weights>): void {
-        const novosPesos = {
-            ...this.weights,
-            ...weights
-        };
-
-        // Valida soma dos pesos
-        const soma = Object.values(novosPesos).reduce((acc, val) => acc + val, 0);
-        if (Math.abs(soma - 1) > 0.001) {
-            throw new Error(
-                `[PredictiveEngine] Soma dos pesos é ${soma.toFixed(3)}, esperado 1.`
-            );
-        }
-
-        this.weights = novosPesos;
-    }
-
-    /**
-     * Obtém os pesos atuais
-     */
-    getWeights(): typeof this.weights {
-        return { ...this.weights };
-    }
-
-    /**
-     * Define quantos padrões considerar
+     * Define quantos padrões considerar.
      */
     setTopPatternsCount(count: number): void {
-        if (count < 1) {
+
+        if (
+            !Number.isInteger(count) ||
+            count < 1
+        ) {
             throw new Error(
-                `[PredictiveEngine] Número de padrões inválido: ${count}. Deve ser >= 1.`
+                `[PredictiveEngine] Número de padrões inválido: ${count}. ` +
+                'Deve ser um inteiro >= 1.'
             );
         }
+
         this.topPatternsCount = count;
     }
 
     /**
-     * Define quantos números gerar por padrão
+     * Define quantos números considerar por padrão.
      */
     setNumbersPerPattern(count: number): void {
-        if (count < 1) {
+
+        if (
+            !Number.isInteger(count) ||
+            count < 1
+        ) {
             throw new Error(
-                `[PredictiveEngine] Números por padrão inválido: ${count}. Deve ser >= 1.`
+                `[PredictiveEngine] Números por padrão inválido: ${count}. ` +
+                'Deve ser um inteiro >= 1.'
             );
         }
+
         this.numbersPerPattern = count;
     }
 
     /**
-     * Valida se os pesos são válidos
+     * Retorna os parâmetros estruturais atuais
+     * utilizados pelo PredictiveEngine.
      */
-    validarPesos(): boolean {
-        const soma = Object.values(this.weights).reduce((acc, val) => acc + val, 0);
-        return Math.abs(soma - 1) < 0.001;
+        /**
+     * Retorna os parâmetros estruturais atuais
+     * utilizados pelo PredictiveEngine.
+     */
+    getConfig(): {
+        topPatternsCount: number;
+        numbersPerPattern: number;
+    } {
+        return {
+            topPatternsCount: this.topPatternsCount,
+            numbersPerPattern: this.numbersPerPattern
+        };
+    }
+
+    /**
+     * Retorna os pesos atuais do AdaptiveBrain.
+     *
+     * Os pesos pertencem ao PredictiveScoring
+     * dentro do cérebro adaptativo.
+     */
+    getAdaptiveWeights() {
+
+        if (!this.adaptiveBrain) {
+            throw new Error(
+                '[PredictiveEngine] AdaptiveBrain ainda não foi inicializado.'
+            );
+        }
+
+        return this.adaptiveBrain.getWeights();
     }
 }
 
 // ============================================
-// SEÇÃO 5: EXPORTS
+// SEÇÃO 7: EXPORTS
 // ============================================
 
 export default PredictiveEngine;
