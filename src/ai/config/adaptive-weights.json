@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-06",
+  "megasena": {
+    "pesos": {
+      "frequencia": 2.4784227582434544,
+      "tendenciaFrequencia": 1.9657274302098735,
+      "estabilidadeFrequencia": 0.32625023525032093,
+      "atraso": 0.25,
+      "atrasoRelativo": 0.25,
+      "regularidadeAtraso": 0.25,
+      "taxaRecente": 0.8157292049492567,
+      "intensidadeRecente": 0.8157292049492567,
+      "persistenciaRecente": 0.8157292049492567,
+      "distanciaRecente": 0.25,
+      "probabilidade": 3.5330500450620486,
+      "suportePadrao": 0.25
+    },
+    "calibracao": {
+      "minTreino": 300,
+      "passo": 1,
+      "recentWindow": 20,
+      "topPatternsCount": 10,
+      "numbersPerPattern": 5,
+      "holdoutPercentual": 30
+    }
+  }
+}
