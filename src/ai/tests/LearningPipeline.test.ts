@@ -37,6 +37,8 @@
 //
 // ============================================================
 
+import { AdaptiveLearning } from '../services/AdaptiveLearning';
+import { AdaptiveLearningState } from '../services/AdaptiveLearningState';
 import { StatisticsContext } from '../services/StatisticsContext';
 import {
     FeatureEngineering,
@@ -54,7 +56,7 @@ import {
 } from '../services/LearningPipeline';
 
 import { BacktestModel } from '../services/Backtesting';
-import { FactorEvaluationInput } from '../services/FactorEvaluation';
+import { FactorEvaluation, FactorEvaluationInput } from '../services/FactorEvaluation';
 
 // ============================================================
 // CONFIGURAÇÃO
@@ -80,6 +82,15 @@ export interface LearningPipelineTestConfig {
     numbersPerPattern?: number;
 
     recentWindow?: number;
+
+    adaptiveLearning?: {
+        pesoMinimo?: number;
+        pesoMaximo?: number;
+        alteracaoMaxima?: number;
+        amostrasMinimas?: number;
+        sensibilidade?: number;
+        suavizacao?: number;
+    };
 }
 
 // ============================================================
@@ -539,11 +550,11 @@ export function executarTesteLearningPipeline(
     );
 
     console.log(
-        `Testes acima do baseline: ${metrics.testesAcimaBaseline}`
+        `Testes acima do baseline: ${metrics.testesAcimaDoBaseline}`
     );
 
     console.log(
-        `Testes abaixo do baseline: ${metrics.testesAbaixoBaseline}`
+        `Testes abaixo do baseline: ${metrics.testesAbaixoDoBaseline}`
     );
 
     console.log('');
@@ -580,7 +591,7 @@ export function executarTesteLearningPipeline(
     );
 
     console.log(
-        `Ciclo: ${estado.ciclo}`
+        `Ciclo: ${estado.cicloAtual}`
     );
 
     console.log('');
@@ -627,7 +638,7 @@ export function executarTesteLearningPipeline(
         estabilidade:
             estado.estabilidade,
         ciclo:
-            estado.ciclo,
+            estado.cicloAtual,
         fatoresAvaliados:
             avaliacao.fatores.map(
                 fator => fator.fator
@@ -882,7 +893,8 @@ function validarResultadoFinal(
 
     for (const [nome, peso] of Object.entries(
         resultado.learning.pesosNovos
-    )) {
+    ) as [string, number][]) {
+ 
 
         if (!Number.isFinite(peso)) {
             throw new Error(
@@ -918,6 +930,330 @@ function validarResultadoFinal(
             `[LearningPipelineTest] Configuração inválida para ${config.loteria}.`
         );
     }
+}
+
+// ============================================================
+// WALK-FORWARD ADAPTATIVO
+// ============================================================
+
+export function executarWalkForwardAdaptativo(
+    dados: number[][],
+    config: LearningPipelineTestConfig
+): LearningPipelineTestResult {
+
+    validarDados(dados, config);
+
+    const predictiveScoring =
+        new PredictiveScoring();
+
+    const factorEvaluation =
+        new FactorEvaluation();
+
+    const adaptiveLearning =
+        new AdaptiveLearning(
+            config.adaptiveLearning
+        );
+
+    const state =
+        new AdaptiveLearningState(
+            config.loteria,
+            {
+                frequencia: 1,
+                tendenciaFrequencia: 1,
+                estabilidadeFrequencia: 1,
+                atraso: 1,
+                atrasoRelativo: 1,
+                regularidadeAtraso: 1,
+                taxaRecente: 1,
+                intensidadeRecente: 1,
+                persistenciaRecente: 1,
+                distanciaRecente: 1,
+                probabilidade: 1,
+                suportePadrao: 1
+            }
+        );
+
+    const previsoes: Array<{
+        concursoIndex: number;
+        numerosPrevistos: number[];
+        numerosReais: number[];
+        acertos: number;
+    }> = [];
+
+    const fatoresAcumulados:
+        Record<string, FactorEvaluationInput[]> = {};
+
+    const nomesFatores = [
+        'frequencia',
+        'tendenciaFrequencia',
+        'estabilidadeFrequencia',
+        'atraso',
+        'atrasoRelativo',
+        'regularidadeAtraso',
+        'taxaRecente',
+        'intensidadeRecente',
+        'persistenciaRecente',
+        'distanciaRecente',
+        'probabilidade',
+        'suportePadrao'
+    ] as const;
+
+    for (const nomeFator of nomesFatores) {
+        fatoresAcumulados[nomeFator] = [];
+    }
+
+    const pesosIniciais =
+        state.getPesosAtuais();
+
+    let ultimoAprendizado =
+        adaptiveLearning.ajustar(
+            state.getPesosAtuais(),
+            nomesFatores.map(nome => ({
+                fator: nome,
+                amostras: 0,
+                mediaScore: 0,
+                acertos: 0,
+                erros: 0,
+                taxaAcerto: 0,
+                discriminacao: 0,
+                desempenho: 0
+            }))
+        );
+
+    for (
+        let indice = config.minTreino;
+        indice < dados.length;
+        indice += config.passo
+    ) {
+
+        const dadosTreino =
+            dados
+                .slice(0, indice)
+                .map(concurso => [...concurso]);
+
+        const resultadoReal =
+            [...dados[indice]];
+
+        if (
+            dadosTreino.length <
+            config.minTreino
+        ) {
+            throw new Error(
+                `[LearningPipelineTest] Dados insuficientes ` +
+                `antes do concurso ${indice}.`
+            );
+        }
+
+        /*
+         * IMPORTANTE:
+         * A previsão usa os pesos instalados
+         * antes deste concurso.
+         */
+        const context =
+            new StatisticsContext(dadosTreino);
+
+        const featureEngineering =
+            new FeatureEngineering(
+                context,
+                {
+                    maxNumero: config.maxNumero,
+                    incluirZero: config.incluirZero,
+                    topPatternsCount:
+                        config.topPatternsCount ?? 10,
+                    numbersPerPattern:
+                        config.numbersPerPattern ?? 5,
+                    recentWindow:
+                        config.recentWindow ??
+                        context.dispersion.getWindowSize()
+                }
+            );
+
+        const features =
+            featureEngineering.extrairFeatures();
+
+        const predictiveFeatures =
+            converterParaPredictiveFeatures(features);
+
+        const scores =
+            predictiveScoring.calcularScores(
+                predictiveFeatures
+            );
+
+        const ordenados =
+            [...scores].sort(
+                (a, b) =>
+                    b.score !== a.score
+                        ? b.score - a.score
+                        : a.numero - b.numero
+            );
+
+        const numerosPrevistos =
+            ordenados
+                .slice(
+                    0,
+                    config.quantidadeNumeros
+                )
+                .map(item => item.numero);
+
+        if (
+            numerosPrevistos.length !==
+            config.quantidadeNumeros
+        ) {
+            throw new Error(
+                `[LearningPipelineTest] Quantidade ` +
+                `de previsão inválida no concurso ${indice}.`
+            );
+        }
+
+        const acertos =
+            numerosPrevistos.filter(
+                numero =>
+                    resultadoReal.includes(numero)
+            ).length;
+
+        previsoes.push({
+            concursoIndex: indice,
+            numerosPrevistos,
+            numerosReais: resultadoReal,
+            acertos
+        });
+
+        /*
+         * O resultado real só entra AGORA,
+         * depois que a previsão já foi feita.
+         */
+        const featureMap =
+            new Map<number, NumberFeatures>();
+
+        for (const feature of features) {
+            featureMap.set(
+                feature.numero,
+                feature
+            );
+        }
+
+        for (const nomeFator of nomesFatores) {
+
+            for (const numero of
+                features.map(feature => feature.numero)
+            ) {
+
+                const feature =
+                    featureMap.get(numero);
+
+                if (!feature) {
+                    throw new Error(
+                        `[LearningPipelineTest] Feature ausente ` +
+                        `para ${numero}.`
+                    );
+                }
+
+                fatoresAcumulados[nomeFator].push({
+                    numero,
+                    fator: feature[nomeFator],
+                    resultadoReal:
+                        resultadoReal.includes(numero)
+                });
+            }
+        }
+
+        /*
+         * Só atualiza o aprendizado quando existe
+         * evidência mínima suficiente.
+         */
+        const avaliacao =
+            factorEvaluation.avaliarFatores(
+                fatoresAcumulados
+            );
+
+        const aprendizado =
+            adaptiveLearning.ajustar(
+                state.getPesosAtuais(),
+                avaliacao.fatores
+            );
+
+        const houveAjuste =
+            aprendizado.alteracoesAplicadas > 0;
+
+        if (houveAjuste) {
+
+            state.aplicarResultado(
+                aprendizado
+            );
+
+            predictiveScoring.setWeights(
+                aprendizado.pesosNovos
+            );
+
+            ultimoAprendizado =
+                aprendizado;
+
+            console.log(
+                `🧠 Aprendizado aplicado após ` +
+                `concurso ${indice}. ` +
+                `Ciclo=${state.getCicloAtual()}`
+            );
+        }
+    }
+
+    if (previsoes.length === 0) {
+        throw new Error(
+            '[LearningPipelineTest] Nenhuma previsão walk-forward foi executada.'
+        );
+    }
+
+    const totalAcertos =
+        previsoes.reduce(
+            (total, previsao) =>
+                total + previsao.acertos,
+            0
+        );
+
+    const mediaAcertos =
+        totalAcertos /
+        previsoes.length;
+
+    const ganhoSobreBaseline =
+        config.baselineMediaAcertos === 0
+            ? mediaAcertos
+            : (
+                mediaAcertos -
+                config.baselineMediaAcertos
+            ) /
+            config.baselineMediaAcertos;
+
+    const estado =
+        state.getSnapshot();
+
+    const pesosDepois =
+        { ...predictiveScoring.getWeights() };
+
+    const avaliacaoFinal =
+        factorEvaluation.avaliarFatores(
+            fatoresAcumulados
+        );
+
+    return {
+        aprovado: true,
+        loteria: config.loteria,
+        concursos: dados.length,
+        testesBacktest: previsoes.length,
+        mediaAcertos,
+        baselineMediaAcertos:
+            config.baselineMediaAcertos,
+        ganhoSobreBaseline,
+        pesosAntes: pesosIniciais,
+        pesosDepois,
+        estabilidade:
+            estado.estabilidade,
+        ciclo:
+            estado.cicloAtual,
+        fatoresAvaliados:
+            avaliacaoFinal.fatores.map(
+                fator => fator.fator
+            ),
+        erros: []
+    };
 }
 
 // ============================================================
