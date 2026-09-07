@@ -1,13 +1,19 @@
 // ============================================
 // CAMINHO: src/ai/engines/SmartRandomEngine.ts
+// VERSÃO: 2.1.0 (INTEGRAÇÃO ADAPTATIVA)
 // ============================================
 
 import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine'; 
 import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
+import {
+    EngineLearningBridge,
+    SmartRandomLearningContext
+} from '../services/EngineLearningBridge';
 
 export class SmartRandomEngine extends BaseEngine {
     private confidenceCalc: ConfidenceCalculator;
+    private smartRandomLearning!: SmartRandomLearningContext;
 
     // ✅ ÚNICA MODIFICAÇÃO: CONSTRUTOR COM 4 ARGUMENTOS
     constructor(
@@ -31,25 +37,38 @@ export class SmartRandomEngine extends BaseEngine {
     gerarJogos(quantidade: number, seed: number, params: any = {}): EngineResult {
         const jogos: JogoGerado[] = [];
 
-        if (!this.context || this.dados.length < 5) {
-            for (let i = 0; i < quantidade; i++) {
-                const numeros = this.gerarAleatorio(this.config.numerosPadrao, seed + i);
-                const jogo = this.criarJogo(numeros, seed + i);
-                jogos.push(jogo);
-            }
-
-            return {
-                games: jogos,
-                confidence: 20,
-                engineName: this.getNome(),
-                explanation: ['🎲 Aleatório puro (poucos dados)']
-            };
+        if (!this.context) {
+            throw new Error(
+                '[SmartRandomEngine] StatisticsContext não foi inicializado.'
+            );
         }
+
+        if (this.dados.length < 10) {
+            throw new Error(
+                `[SmartRandomEngine] Dados insuficientes: ${this.dados.length} concursos. Mínimo esperado: 10 concursos.`
+            );
+        }
+
+        const learningBridge = new EngineLearningBridge();
+
+        this.smartRandomLearning =
+            learningBridge.prepararSmartRandom(
+                this.dados,
+                {
+                    loteria: this.config.lotteryType,
+                    maxNumero: this.config.maxNumero,
+                    incluirZero: this.config.incluirZero,
+                    quantidadeNumeros: this.config.numerosPadrao,
+                    minTreino: 300,
+                    passo: 1,
+                    recentWindow: 20
+                }
+            );
 
         const frequency = this.context.frequency;
 
         for (let i = 0; i < quantidade; i++) {
-            const numeros = this.gerarNumerosSmartRandom(frequency, seed + i);
+            const numeros = this.gerarNumerosSmartRandom(frequency, seed + i, this.smartRandomLearning);
             const jogo = this.criarJogo(numeros, seed + i, [
                 '🎲 Aleatório ponderado por frequência'
             ]);
@@ -67,6 +86,7 @@ export class SmartRandomEngine extends BaseEngine {
             engineName: this.getNome(),
             explanation: [
                 `🎲 ${this.dados.length} concursos analisados`,
+                `🧠 Aleatoriedade modulada por aprendizado adaptativo`,
                 `📊 Aleatório com viés estatístico`
             ]
         };
@@ -74,7 +94,8 @@ export class SmartRandomEngine extends BaseEngine {
 
     private gerarNumerosSmartRandom(
         frequency: FrequencyAnalyzer,
-        seed: number
+        seed: number,
+        learning: SmartRandomLearningContext
     ): number[] {
         const quantidade = this.config.numerosPadrao;
         const min = this.config.incluirZero ? 0 : 1;
@@ -85,7 +106,34 @@ export class SmartRandomEngine extends BaseEngine {
 
         for (let i = min; i <= max; i++) {
             const freq = frequency.getFrequencia(i);
-            const peso = freq + this.random.next(seed + i) * 0.5;
+            const aprendido = learning.scoresAdaptativos.find(
+                item => item.numero === i
+            );
+
+            if (!aprendido) {
+                throw new Error(
+                    `[SmartRandomEngine] Score adaptativo ausente para o número ${i}.`
+                );
+            }
+
+            // A aleatoriedade continua sendo a identidade do motor.
+            // O aprendizado apenas modula a ponderação estatística.
+            const fatorAdaptativo =
+                aprendido.score > 0
+                    ? aprendido.score
+                    : 0;
+
+            const peso =
+                freq *
+                (0.5 + fatorAdaptativo) +
+                this.random.next(seed + i) * 0.5;
+
+            if (!Number.isFinite(peso) || peso < 0) {
+                throw new Error(
+                    `[SmartRandomEngine] Peso inválido para o número ${i}: ${peso}.`
+                );
+            }
+
             scores.push({ numero: i, peso });
         }
 
