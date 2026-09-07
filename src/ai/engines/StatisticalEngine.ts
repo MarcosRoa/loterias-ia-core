@@ -107,7 +107,21 @@ export class StatisticalEngine extends BaseEngine {
         // ============================================
         this.validarContexto();
         this.validarQuantidade(quantidade);
-        
+        const learningBridge = new EngineLearningBridge();
+
+        this.statisticalLearning =
+            learningBridge.prepararEstatistica(
+                this.dados,
+                {
+                    loteria: this.config.lotteryType,
+                    maxNumero: this.config.maxNumero,
+                    incluirZero: this.config.incluirZero,
+                    quantidadeNumeros: this.config.numerosPadrao,
+                    minTreino: 300,
+                    passo: 1,
+                    recentWindow: 20
+                }
+            );
         const dispersao = params.dispersao || 15;
 
         // ============================================
