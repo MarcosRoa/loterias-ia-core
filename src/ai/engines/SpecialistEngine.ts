@@ -1,8 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/engines/SpecialistEngine.ts
 // DATA CRIAÇÃO: 2026-01-20
-// STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 2.1.0 (VERSÃO REVISADA)
+// STATUS: INTEGRAÇÃO ADAPTATIVA
+// VERSÃO: 2.2.0 (INTEGRAÇÃO ADAPTATIVA)
 // ============================================ 
 // 
 // SEÇÃO 1: IMPORTS
@@ -31,6 +31,10 @@ import { PatternAnalyzer } from '../analysis/PatternAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { GameEvaluator } from '../evaluation/GameEvaluator';
 import { ScoreItem } from '../types';
+import {
+    EngineLearningBridge,
+    SpecialistLearningContext
+} from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: SPECIALIST ENGINE
@@ -115,6 +119,13 @@ export class SpecialistEngine extends BaseEngine {
      */
     private numbersPerPattern: number = 3;
 
+    /**
+     * Conhecimento adaptativo fornecido pelo cérebro central.
+     * A lógica especialista continua sendo aplicada nesta engine;
+     * o aprendizado apenas recalibra seus pesos nativos.
+     */
+    private specialistLearning!: SpecialistLearningContext;
+
     constructor(
         dados: number[][],
         config: EngineConfig,
@@ -150,6 +161,25 @@ export class SpecialistEngine extends BaseEngine {
         this.validarDadosSuficientes();
 
         // ============================================
+        // CÉREBRO ADAPTATIVO CENTRAL
+        // ============================================
+        const learningBridge = new EngineLearningBridge();
+
+        this.specialistLearning =
+            learningBridge.prepararEspecialista(
+                this.dados,
+                {
+                    loteria: this.config.lotteryType,
+                    maxNumero: this.config.maxNumero,
+                    incluirZero: this.config.incluirZero,
+                    quantidadeNumeros: this.config.numerosPadrao,
+                    minTreino: 300,
+                    passo: 1,
+                    recentWindow: 20
+                }
+            );
+
+        // ============================================
         // PARÂMETROS
         // ============================================
         const dispersao = params.dispersao || 15;
@@ -178,7 +208,8 @@ export class SpecialistEngine extends BaseEngine {
             frequency,
             delay,
             dispersion,
-            patterns
+            patterns,
+            this.obterPesosAdaptativos()
         );
 
         // ============================================
@@ -256,6 +287,7 @@ export class SpecialistEngine extends BaseEngine {
             explanation: [
                 `🎯 ${this.dados.length} concursos analisados`,
                 `📊 ${totalCandidatos} candidatos avaliados`,
+                `🧠 Pesos adaptativos: ${this.obterResumoPesosAdaptativos()}`,
                 `🎯 Confiança: ${confianca.confianca.toFixed(0)}%`
             ]
         };
@@ -282,7 +314,12 @@ export class SpecialistEngine extends BaseEngine {
         frequency: FrequencyAnalyzer,
         delay: DelayAnalyzer,
         dispersion: DispersionAnalyzer,
-        patterns: PatternAnalyzer
+        patterns: PatternAnalyzer,
+        pesos: {
+            frequencia: number;
+            atraso: number;
+            padrao: number;
+        }
     ): ScoreItem[] {
         const min = this.config.incluirZero ? 0 : 1;
         const max = this.config.maxNumero;
@@ -314,11 +351,14 @@ export class SpecialistEngine extends BaseEngine {
             const delayScore = delay.getAtrasoNormalizado(i) / 100;
             const padraoScore = padroesNumeros.has(i) ? 0.9 : 0.1;
 
-            // Aplica pesos (soma = 1)
+            // Aplica os pesos efetivos:
+            // os pesos nativos da Especialista preservam sua identidade,
+            // enquanto o cérebro adaptativo recalibra a importância de
+            // frequência, atraso e padrões.
             let score = (
-                freqScore * this.weights.frequencia +
-                delayScore * this.weights.atraso +
-                padraoScore * this.weights.padrao
+                freqScore * pesos.frequencia +
+                delayScore * pesos.atraso +
+                padraoScore * pesos.padrao
             );
 
             // ============================================
@@ -342,6 +382,88 @@ export class SpecialistEngine extends BaseEngine {
     }
 
     /**
+     * Converte os pesos aprendidos pelo cérebro central em pesos
+     * compatíveis com a identidade da Especialista.
+     *
+     * Frequência:
+     * - frequencia
+     *
+     * Atraso:
+     * - atraso
+     * - atrasoRelativo
+     * - regularidadeAtraso
+     *
+     * Padrão:
+     * - suportePadrao
+     *
+     * Os pesos nativos 40/30/30 continuam sendo a estrutura do motor;
+     * o aprendizado atua como recalibração multiplicativa e o resultado
+     * é renormalizado para manter soma 1.
+     */
+    private obterPesosAdaptativos(): {
+        frequencia: number;
+        atraso: number;
+        padrao: number;
+    } {
+        if (!this.specialistLearning) {
+            throw new Error(
+                '[SpecialistEngine] Conhecimento adaptativo não foi preparado antes do cálculo de scores.'
+            );
+        }
+
+        const aprendidos =
+            this.specialistLearning.conhecimento.pesosAdaptativos;
+
+        const fatorFrequencia = aprendidos.frequencia;
+
+        const fatoresAtraso = [
+            aprendidos.atraso,
+            aprendidos.atrasoRelativo,
+            aprendidos.regularidadeAtraso
+        ];
+
+        const somaAtraso = fatoresAtraso.reduce(
+            (soma, valor) => soma + valor,
+            0
+        );
+
+        const fatorAtraso =
+            somaAtraso / fatoresAtraso.length;
+
+        const fatorPadrao =
+            aprendidos.suportePadrao;
+
+        const pesosBrutos = {
+            frequencia:
+                this.weights.frequencia * fatorFrequencia,
+            atraso:
+                this.weights.atraso * fatorAtraso,
+            padrao:
+                this.weights.padrao * fatorPadrao
+        };
+
+        const soma = Object.values(pesosBrutos).reduce(
+            (total, valor) => total + valor,
+            0
+        );
+
+        if (
+            !Number.isFinite(soma) ||
+            soma <= 0
+        ) {
+            throw new Error(
+                `[SpecialistEngine] Não foi possível normalizar os pesos adaptativos da Especialista. Soma=${soma}.`
+            );
+        }
+
+        return {
+            frequencia: pesosBrutos.frequencia / soma,
+            atraso: pesosBrutos.atraso / soma,
+            padrao: pesosBrutos.padrao / soma
+        };
+    }
+
+    /**
      * Seleciona números SEM diversificação
      * Usado para gerar candidatos independentes
      */
@@ -354,6 +476,16 @@ export class SpecialistEngine extends BaseEngine {
         const pool = this.candidatePool.criarPool(scores, this.config.lotteryType);
         const selecionados = this.selectionStrategy.selecionar(pesos, quantidade, { seed, poolSize: this.config.maxNumero });
         return selecionados;
+    }
+
+    private obterResumoPesosAdaptativos(): string {
+        const pesos = this.obterPesosAdaptativos();
+
+        return (
+            `F ${ (pesos.frequencia * 100).toFixed(1)}% | ` +
+            `A ${ (pesos.atraso * 100).toFixed(1)}% | ` +
+            `P ${ (pesos.padrao * 100).toFixed(1)}%`
+        );
     }
 
     // ============================================
@@ -580,6 +712,4 @@ export class SpecialistEngine extends BaseEngine {
 // ============================================
 // SEÇÃO 5: EXPORTS
 // ============================================
-
-
 export default SpecialistEngine;
