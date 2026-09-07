@@ -106,11 +106,21 @@ export interface StatisticalLearningContext {
     conhecimento: LearnedEngineKnowledge;
 }
 
+export interface SmartRandomLearningContext {
+    tipo: 'smartRandom';
+    conhecimento: LearnedEngineKnowledge;
+    scoresAdaptativos: Array<{
+        numero: number;
+        score: number;
+    }>;
+}
+
 export type EngineLearningContext =
     | ProbabilityLearningContext
     | SpecialistLearningContext
     | HybridLearningContext
-    | StatisticalLearningContext;
+    | StatisticalLearningContext
+    | SmartRandomLearningContext;
 
 // ============================================================
 // PONTE
@@ -330,6 +340,65 @@ export class EngineLearningBridge {
         return {
             tipo: 'estatistica',
             conhecimento: this.obterConhecimento(config)
+        };
+    }
+
+    // ========================================================
+    // SMART RANDOM
+    // ========================================================
+
+    prepararSmartRandom(
+        dados: number[][],
+        config: EngineLearningConfig
+    ): SmartRandomLearningContext {
+
+        this.validarDados(dados);
+
+        const conhecimento =
+            this.obterConhecimento(config);
+
+        const brain = new AdaptiveBrain(
+            dados,
+            {
+                maxNumero: config.maxNumero,
+                incluirZero: config.incluirZero,
+                topPatternsCount:
+                    config.topPatternsCount ?? 10,
+                numbersPerPattern:
+                    config.numbersPerPattern ?? 5,
+                recentWindow:
+                    config.recentWindow ?? 20
+            },
+            conhecimento.pesosAdaptativos
+        );
+
+        const scores = brain.calcularScores();
+
+        if (!Array.isArray(scores) || scores.length === 0) {
+            throw new Error(
+                `[EngineLearningBridge] O cérebro não retornou scores para "${config.loteria}".`
+            );
+        }
+
+        for (const item of scores) {
+            if (
+                !Number.isInteger(item.numero) ||
+                !Number.isFinite(item.score) ||
+                item.score < 0
+            ) {
+                throw new Error(
+                    `[EngineLearningBridge] Score adaptativo inválido para "${config.loteria}": número=${item.numero}, score=${item.score}.`
+                );
+            }
+        }
+
+        return {
+            tipo: 'smartRandom',
+            conhecimento,
+            scoresAdaptativos: scores.map(item => ({
+                numero: item.numero,
+                score: item.score
+            }))
         };
     }
 
