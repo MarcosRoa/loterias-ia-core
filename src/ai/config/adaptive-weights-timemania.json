@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-07",
+  "loteria": "timemania",
+  "pesos": {
+    "frequencia": 1.0505327857040736,
+    "tendenciaFrequencia": 1.4410714741787454,
+    "estabilidadeFrequencia": 0.6079017751572261,
+    "atraso": 0.3000197430901512,
+    "atrasoRelativo": 0.26084329506787424,
+    "regularidadeAtraso": 4.0,
+    "taxaRecente": 0.6862844178350225,
+    "intensidadeRecente": 0.6862844178350225,
+    "persistenciaRecente": 0.6862844178350225,
+    "distanciaRecente": 0.3011954760430142,
+    "probabilidade": 1.1489666522410926,
+    "suportePadrao": 0.8302054708046166
+  },
+  "calibracao": {
+    "metodo": "walk-forward",
+    "minTreino": 300,
+    "passo": 1,
+    "maxTestes": 1500,
+    "status": "provisorio"
+  }
+}

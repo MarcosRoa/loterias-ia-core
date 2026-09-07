@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-07",
+  "loteria": "duplasena",
+  "pesos": {
+    "frequencia": 2.3451448613144126,
+    "tendenciaFrequencia": 0.47116649218656986,
+    "estabilidadeFrequencia": 0.6519496166598507,
+    "atraso": 0.7633575678615703,
+    "atrasoRelativo": 0.70078695313958,
+    "regularidadeAtraso": 0.25,
+    "taxaRecente": 0.8574402958520381,
+    "intensidadeRecente": 0.8574402958520381,
+    "persistenciaRecente": 0.8574402958520381,
+    "distanciaRecente": 0.7118139698235626,
+    "probabilidade": 2.1780985475087435,
+    "suportePadrao": 1.3554110050538926
+  },
+  "calibracao": {
+    "metodo": "walk-forward",
+    "minTreino": 300,
+    "passo": 1,
+    "maxTestes": 1500,
+    "status": "provisorio"
+  }
+}

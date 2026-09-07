@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-07",
+  "loteria": "milionaria",
+  "pesos": {
+    "frequencia": 1.2973689370544408,
+    "tendenciaFrequencia": 1.1804595166814198,
+    "estabilidadeFrequencia": 0.9697199694553275,
+    "atraso": 1.1084579574171742,
+    "atrasoRelativo": 1.0934148998040394,
+    "regularidadeAtraso": 0.5276093594123913,
+    "taxaRecente": 0.8834745410032471,
+    "intensidadeRecente": 0.8834745410032471,
+    "persistenciaRecente": 0.8834745410032471,
+    "distanciaRecente": 1.054185708898115,
+    "probabilidade": 1.2872070777488487,
+    "suportePadrao": 0.8311529505185027
+  },
+  "calibracao": {
+    "metodo": "walk-forward",
+    "minTreino": 300,
+    "passo": 1,
+    "maxTestes": 1500,
+    "status": "provisorio"
+  }
+}

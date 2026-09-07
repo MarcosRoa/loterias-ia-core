@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-07",
+  "loteria": "diadesorte",
+  "pesos": {
+    "frequencia": 0.25,
+    "tendenciaFrequencia": 0.49014459628434576,
+    "estabilidadeFrequencia": 0.41933576835911146,
+    "atraso": 2.4133103145588763,
+    "atrasoRelativo": 2.749366301445231,
+    "regularidadeAtraso": 0.44864027006370094,
+    "taxaRecente": 0.4098796358099908,
+    "intensidadeRecente": 0.4098796358099908,
+    "persistenciaRecente": 0.4098796358099908,
+    "distanciaRecente": 3.15323729734828,
+    "probabilidade": 0.25,
+    "suportePadrao": 0.596770638175247
+  },
+  "calibracao": {
+    "metodo": "walk-forward",
+    "minTreino": 300,
+    "passo": 1,
+    "maxTestes": 1500,
+    "status": "provisorio"
+  }
+}
