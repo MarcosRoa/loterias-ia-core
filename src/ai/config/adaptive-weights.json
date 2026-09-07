@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updatedAt": "2026-09-06",
+  "updatedAt": "2026-09-07",
   "megasena": {
     "pesos": {
       "frequencia": 2.4784227582434544,
@@ -23,6 +23,134 @@
       "topPatternsCount": 10,
       "numbersPerPattern": 5,
       "holdoutPercentual": 30
+    }
+  },
+  "quina": {
+    "pesos": {
+      "frequencia": 0.3133132316716699,
+      "tendenciaFrequencia": 3.9994665045930367,
+      "estabilidadeFrequencia": 2.1041040960485957,
+      "atraso": 0.25,
+      "atrasoRelativo": 0.25,
+      "regularidadeAtraso": 0.8927543947065303,
+      "taxaRecente": 0.25,
+      "intensidadeRecente": 0.25,
+      "persistenciaRecente": 0.25,
+      "distanciaRecente": 0.25,
+      "probabilidade": 0.3288935038259078,
+      "suportePadrao": 2.861668329931873
+    }
+  },
+  "lotofacil": {
+    "pesos": {
+      "frequencia": 0.3567433966535642,
+      "tendenciaFrequencia": 0.25,
+      "estabilidadeFrequencia": 0.25,
+      "atraso": 2.6611520521874126,
+      "atrasoRelativo": 3.467357821608532,
+      "regularidadeAtraso": 0.25,
+      "taxaRecente": 0.28358690027029454,
+      "intensidadeRecente": 0.28358690027029454,
+      "persistenciaRecente": 0.28358690027029454,
+      "distanciaRecente": 3.134095021271065,
+      "probabilidade": 0.530560638505937,
+      "suportePadrao": 0.25
+    }
+  },
+  "lotomania": {
+    "pesos": {
+      "frequencia": 2.1477202972967384,
+      "tendenciaFrequencia": 0.2588913141116377,
+      "estabilidadeFrequencia": 0.39684043212235165,
+      "atraso": 1.772619132002924,
+      "atrasoRelativo": 2.095950582965944,
+      "regularidadeAtraso": 0.25,
+      "taxaRecente": 0.25,
+      "intensidadeRecente": 0.25,
+      "persistenciaRecente": 0.25,
+      "distanciaRecente": 1.7492005359582303,
+      "probabilidade": 1.6353082153978578,
+      "suportePadrao": 0.9436127650144667
+    }
+  },
+  "duplasena": {
+    "pesos": {
+      "frequencia": 1.135949451085286,
+      "tendenciaFrequencia": 0.3006714141123013,
+      "estabilidadeFrequencia": 0.41682529465442114,
+      "atraso": 0.2500204077033868,
+      "atrasoRelativo": 0.2500204077033868,
+      "regularidadeAtraso": 1.7761066778158436,
+      "taxaRecente": 0.5658732643813426,
+      "intensidadeRecente": 0.5658732643813426,
+      "persistenciaRecente": 0.5658732643813426,
+      "distanciaRecente": 0.2500204077033868,
+      "probabilidade": 1.9224396228237728,
+      "suportePadrao": 4
+    }
+  },
+  "timemania": {
+    "pesos": {
+      "frequencia": 0.7990274413702151,
+      "tendenciaFrequencia": 3.4275228569326077,
+      "estabilidadeFrequencia": 0.25,
+      "atraso": 0.25,
+      "atrasoRelativo": 0.25,
+      "regularidadeAtraso": 0.6878766640531155,
+      "taxaRecente": 1.5141626008111746,
+      "intensidadeRecente": 1.5141626008111746,
+      "persistenciaRecente": 1.5141626008111746,
+      "distanciaRecente": 0.2902282144145463,
+      "probabilidade": 0.6524586728232146,
+      "suportePadrao": 0.8504800710539303
+    }
+  },
+  "milionaria": {
+    "pesos": {
+      "frequencia": 1.2973689370544408,
+      "tendenciaFrequencia": 1.1804595166814198,
+      "estabilidadeFrequencia": 0.9697199694553275,
+      "atraso": 1.1084579574171742,
+      "atrasoRelativo": 1.0934148998040394,
+      "regularidadeAtraso": 0.5276093594123913,
+      "taxaRecente": 0.8834745410032471,
+      "intensidadeRecente": 0.8834745410032471,
+      "persistenciaRecente": 0.8834745410032471,
+      "distanciaRecente": 1.054185708898115,
+      "probabilidade": 1.2872070777488487,
+      "suportePadrao": 0.8311529505185027
+    }
+  },
+  "diadesorte": {
+    "pesos": {
+      "frequencia": 0.25,
+      "tendenciaFrequencia": 0.49014459628434576,
+      "estabilidadeFrequencia": 0.41933576835911146,
+      "atraso": 2.4133103145588763,
+      "atrasoRelativo": 2.749366301445231,
+      "regularidadeAtraso": 0.44864027006370094,
+      "taxaRecente": 0.4098796358099908,
+      "intensidadeRecente": 0.4098796358099908,
+      "persistenciaRecente": 0.4098796358099908,
+      "distanciaRecente": 3.15323729734828,
+      "probabilidade": 0.25,
+      "suportePadrao": 0.596770638175247
+    }
+  },
+  "supersete": {
+    "pesos": {
+      "frequencia": 0.4908060705921026,
+      "tendenciaFrequencia": 2.7970338917232738,
+      "estabilidadeFrequencia": 0.25,
+      "atraso": 0.25,
+      "atrasoRelativo": 0.25,
+      "regularidadeAtraso": 0.4684444442250318,
+      "taxaRecente": 1.3622061299509418,
+      "intensidadeRecente": 1.3622061299509418,
+      "persistenciaRecente": 1.3622061299509418,
+      "distanciaRecente": 0.25,
+      "probabilidade": 0.37733347233349723,
+      "suportePadrao": 2.782369477805132
     }
   }
 }
