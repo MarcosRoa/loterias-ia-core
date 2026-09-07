@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/engines/ProbabilityEngine.ts
-// DATA CRIAÇÃO: 2026-01-20
+// DATA CRIAÇÃO: 07/09/2026
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.1.1 (INTEGRAÇÃO COM ENGINE LEARNING BRIDGE)
 // ============================================
