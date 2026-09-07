@@ -1,5 +1,5 @@
 // ============================================================
-// src/ai/services/AdaptiveCalibration.ts   06/09/2026
+// src/ai/services/AdaptiveCalibration.ts   07/09/2026
 // ============================================================
 // Calibração adaptativa walk-forward.
 //
@@ -404,6 +404,20 @@ export class AdaptiveCalibration {
             return a.numero - b.numero;
         });
 
+        // ========================================================
+        // SUPER SETE
+        // ========================================================
+        // No Super Sete cada uma das 7 posições é independente.
+        // O mesmo dígito pode aparecer em várias posições.
+        //
+        // Neste ponto, porém, os scores ainda são globais por
+        // número. Portanto, não podemos simplesmente aplicar
+        // Set() ou rejeitar repetições.
+        //
+        // A seleção mantém os 7 melhores scores e permite
+        // repetição somente para o Super Sete.
+        // ========================================================
+
         const selecionados =
             ordenados
                 .slice(
@@ -421,13 +435,20 @@ export class AdaptiveCalibration {
             );
         }
 
-        if (
-            new Set(selecionados).size !==
-            selecionados.length
-        ) {
-            throw new Error(
-                '[AdaptiveCalibration] Previsão contém números duplicados.'
-            );
+        // ========================================================
+        // LOTERIAS CONVENCIONAIS
+        // ========================================================
+
+        if (this.config.loteria !== 'supersete') {
+
+            if (
+                new Set(selecionados).size !==
+                selecionados.length
+            ) {
+                throw new Error(
+                    '[AdaptiveCalibration] Previsão contém números duplicados.'
+                );
+            }
         }
 
         return selecionados;
@@ -529,6 +550,7 @@ export class AdaptiveCalibration {
             indice < dados.length;
             indice++
         ) {
+
             const concurso = dados[indice];
 
             if (!Array.isArray(concurso)) {
@@ -541,6 +563,23 @@ export class AdaptiveCalibration {
                 throw new Error(
                     `[AdaptiveCalibration] Concurso ${indice} vazio.`
                 );
+            }
+
+            // ====================================================
+            // SUPER SETE
+            // ====================================================
+            // O Super Sete possui exatamente 7 posições.
+            // Dígitos podem se repetir entre posições.
+            // ====================================================
+
+            if (this.config.loteria === 'supersete') {
+
+                if (concurso.length !== 7) {
+                    throw new Error(
+                        `[AdaptiveCalibration] Super Sete: concurso ${indice} ` +
+                        `deve possuir exatamente 7 posições. Recebido: ${concurso.length}.`
+                    );
+                }
             }
 
             const numeros =
@@ -567,7 +606,17 @@ export class AdaptiveCalibration {
                     );
                 }
 
-                if (numeros.has(numero)) {
+                // =================================================
+                // SUPER SETE
+                // =================================================
+                // Repetição de dígitos é válida porque as posições
+                // são independentes.
+                // =================================================
+
+                if (
+                    this.config.loteria !== 'supersete' &&
+                    numeros.has(numero)
+                ) {
                     throw new Error(
                         `[AdaptiveCalibration] Número ${numero} duplicado ` +
                         `no concurso ${indice}.`
