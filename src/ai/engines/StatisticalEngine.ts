@@ -1,8 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/engines/StatisticalEngine.ts
-// DATA CRIAÇÃO: 2026-01-20
-// STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 3.0.0 (VERSÃO FINAL)
+// DATA CRIAÇÃO: 07/09/2026
+// STATUS: INTEGRAÇÃO ADAPTATIVA
+// VERSÃO: 3.1.0 (INTEGRAÇÃO ADAPTATIVA)
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
@@ -29,6 +29,10 @@ import { DelayAnalyzer } from '../analysis/DelayAnalyzer';
 import { DispersionAnalyzer } from '../analysis/DispersionAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
+import {
+    EngineLearningBridge,
+    StatisticalLearningContext
+} from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: STATISTICAL ENGINE
@@ -69,6 +73,8 @@ export class StatisticalEngine extends BaseEngine {
         frequencia: 0.6,
         atraso: 0.4
     };
+
+    private statisticalLearning!: StatisticalLearningContext;
 
     constructor(
         dados: number[][],
@@ -124,7 +130,12 @@ export class StatisticalEngine extends BaseEngine {
 
         for (let i = 0; i < quantidade; i++) {
             // Calcula scores para esta rodada
-            const scores = this.calcularScores(frequency, delay, dispersion);
+            const scores = this.calcularScores(
+                frequency,
+                delay,
+                dispersion,
+                this.obterPesosAdaptativos()
+            );
             
             // Seleciona números usando a nova arquitetura
             const numeros = this.selecionarNumeros(
@@ -158,6 +169,7 @@ export class StatisticalEngine extends BaseEngine {
             engineName: this.getNome(),
             explanation: [
                 `📊 ${this.dados.length} concursos analisados`,
+                `🧠 Pesos adaptativos: ${this.obterResumoPesosAdaptativos()}`,
                 `🎯 Confiança: ${confianca.confianca.toFixed(0)}%`,
                 `📈 Dispersão: ${dispersao} concursos`
             ]
@@ -179,7 +191,11 @@ export class StatisticalEngine extends BaseEngine {
     private calcularScores(
         frequency: FrequencyAnalyzer,
         delay: DelayAnalyzer,
-        dispersion: DispersionAnalyzer
+        dispersion: DispersionAnalyzer,
+        pesos: {
+            frequencia: number;
+            atraso: number;
+        }
     ): ScoreItem[] {
         const min = this.config.incluirZero ? 0 : 1;
         const max = this.config.maxNumero;
@@ -195,8 +211,8 @@ export class StatisticalEngine extends BaseEngine {
             
             // Aplica pesos
             let score = (
-                freqScore * this.weights.frequencia +
-                delayScore * this.weights.atraso
+                freqScore * pesos.frequencia +
+                delayScore * pesos.atraso
             );
 
             // Aplica penalidade de dispersão (se disponível)
@@ -211,6 +227,54 @@ export class StatisticalEngine extends BaseEngine {
         }
 
         return scores;
+    }
+
+    private obterPesosAdaptativos(): {
+        frequencia: number;
+        atraso: number;
+    } {
+        if (!this.statisticalLearning) {
+            throw new Error(
+                '[StatisticalEngine] Conhecimento adaptativo não foi preparado antes do cálculo de scores.'
+            );
+        }
+
+        const aprendidos =
+            this.statisticalLearning.conhecimento.pesosAdaptativos;
+
+        const fatorAtraso = (
+            aprendidos.atraso +
+            aprendidos.atrasoRelativo +
+            aprendidos.regularidadeAtraso
+        ) / 3;
+
+        const pesoFrequencia =
+            this.weights.frequencia * aprendidos.frequencia;
+
+        const pesoAtraso =
+            this.weights.atraso * fatorAtraso;
+
+        const soma = pesoFrequencia + pesoAtraso;
+
+        if (!Number.isFinite(soma) || soma <= 0) {
+            throw new Error(
+                `[StatisticalEngine] Não foi possível normalizar os pesos adaptativos. Soma=${soma}.`
+            );
+        }
+
+        return {
+            frequencia: pesoFrequencia / soma,
+            atraso: pesoAtraso / soma
+        };
+    }
+
+    private obterResumoPesosAdaptativos(): string {
+        const pesos = this.obterPesosAdaptativos();
+
+        return (
+            `F ${(pesos.frequencia * 100).toFixed(1)}% | ` +
+            `A ${(pesos.atraso * 100).toFixed(1)}%`
+        );
     }
 
     // ============================================
