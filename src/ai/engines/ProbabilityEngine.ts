@@ -2,7 +2,7 @@
 // CAMINHO: src/ai/engines/ProbabilityEngine.ts
 // DATA CRIAÇÃO: 2026-01-20
 // STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 2.0.0 (COM NOVA ARQUITETURA)
+// VERSÃO: 2.1.1 (INTEGRAÇÃO COM ENGINE LEARNING BRIDGE)
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
@@ -24,10 +24,10 @@ import {
     JogoGerado
 } from './BaseEngine';
 
-import { FrequencyAnalyzer } from '../analysis/FrequencyAnalyzer';
 import { ProbabilityAnalyzer } from '../analysis/ProbabilityAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
+import { EngineLearningBridge, ProbabilityLearningContext } from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: PROBABILITY ENGINE
@@ -39,11 +39,11 @@ import { ScoreItem } from '../types';
  * Responsabilidade:
  * - Aplicar distribuição binomial
  * - Calcular entropia e variância
- * - Combinar probabilidade com frequência
+ * - Aplicar distribuição probabilística calibrada pelo cérebro adaptativo
  * 
  * Fluxo:
- * 1. Obtém dados de probabilidade e frequência
- * 2. Calcula score combinado (probabilidade + frequência)
+ * 1. Obtém a distribuição probabilística histórica
+ * 2. Recalibra a distribuição com o conhecimento adaptativo
  * 3. Chama selecionarNumeros() da BaseEngine
  * 4. Retorna jogos com explicações
  * 
@@ -72,16 +72,11 @@ export class ProbabilityEngine extends BaseEngine {
     private readonly MIN_DRAWS = 20;
 
     /**
-     * Pesos para o cálculo do score
-     * 
-     * A Probability Engine combina:
-     * - Probabilidade: 60% (binomial, entropia, variância)
-     * - Frequência: 40% (histórico de aparições)
+     * Distribuição probabilística adaptativa fornecida pela ponte central.
+     * A antiga combinação fixa 60/40 foi removida.
      */
-    private weights = {
-        probabilidade: 0.60,
-        frequencia: 0.40
-    };
+    private probabilityLearning: ProbabilityLearningContext | null = null;
+
 
     constructor(
         dados: number[][],
@@ -126,12 +121,27 @@ export class ProbabilityEngine extends BaseEngine {
         // OBTÉM ANALISADORES COM VALIDAÇÃO
         // ============================================
         const probability = this.obterProbability();
-        const frequency = this.obterFrequency();
+        // ============================================
+        // PREPARA CONHECIMENTO ADAPTATIVO CENTRAL
+        // ============================================
+        const learningBridge = new EngineLearningBridge();
+        this.probabilityLearning = learningBridge.prepararProbabilistica(
+            this.dados,
+            {
+                loteria: this.config.lotteryType,
+                maxNumero: this.config.maxNumero,
+                incluirZero: this.config.incluirZero,
+                quantidadeNumeros: this.config.numerosPadrao,
+                minTreino: 300,
+                passo: 1,
+                recentWindow: 20
+            }
+        );
 
         // ============================================
-        // CALCULA SCORES (DETERMINÍSTICO - SEM SEED)
+        // CALCULA SCORES PROBABILÍSTICOS ADAPTATIVOS
         // ============================================
-        const scores = this.calcularScores(probability, frequency);
+        const scores = this.calcularScores();
 
         // ============================================
         // GERA SEEDS DETERMINÍSTICAS
@@ -155,7 +165,7 @@ export class ProbabilityEngine extends BaseEngine {
 
             // Cria o jogo
             const jogo = this.criarJogo(numeros, seeds[i], [
-                '📈 Baseado em distribuição binomial',
+                '📈 Distribuição probabilística adaptativa',
                 '📊 Entropia e variância calculadas'
             ]);
             
@@ -203,38 +213,70 @@ export class ProbabilityEngine extends BaseEngine {
      * @param frequency - Analisador de frequência
      * @returns Lista de scores
      */
-    private calcularScores(
-        probability: ProbabilityAnalyzer,
-        frequency: FrequencyAnalyzer
-    ): ScoreItem[] {
-        const min = this.config.incluirZero ? 0 : 1;
-        const max = this.config.maxNumero;
+    private calcularScores(): ScoreItem[] {
+
+        if (!this.probabilityLearning) {
+            throw new Error(
+                '[ProbabilityEngine] Conhecimento probabilístico adaptativo não foi preparado.'
+            );
+        }
+
+        const probabilidades =
+            this.probabilityLearning.probabilidadesAprendidas;
+
+        if (!Array.isArray(probabilidades) || probabilidades.length === 0) {
+            throw new Error(
+                '[ProbabilityEngine] Distribuição probabilística adaptativa vazia.'
+            );
+        }
+
         const scores: ScoreItem[] = [];
 
-        // ============================================
-        // CALCULA SCORE PARA CADA NÚMERO
-        // ============================================
-        for (let i = min; i <= max; i++) {
-            // Obtém valores
-            // Probabilidade já está em escala 0-1
-            const probScore = probability.getProbabilidade(i);
-            
-            // Frequência normalizada (0-100) convertida para 0-1
-            const freqScore = frequency.getFrequenciaNormalizada(i) / 100;
-
-            // Aplica pesos (soma = 1)
-            const score = (
-                probScore * this.weights.probabilidade +
-                freqScore * this.weights.frequencia
-            );
+        for (const item of probabilidades) {
+            if (
+                !Number.isInteger(item.numero) ||
+                !Number.isFinite(item.probabilidade) ||
+                item.probabilidade < 0
+            ) {
+                throw new Error(
+                    `[ProbabilityEngine] Probabilidade adaptativa inválida para o número ${item.numero}.`
+                );
+            }
 
             scores.push({
-                numero: i,
-                score: Math.max(0, Math.min(1, score)) // Garante [0, 1]
+                numero: item.numero,
+                score: item.probabilidade
             });
         }
 
+        const soma = scores.reduce(
+            (total, item) => total + item.score,
+            0
+        );
+
+        if (!Number.isFinite(soma) || soma <= 0) {
+            throw new Error(
+                '[ProbabilityEngine] Soma da distribuição probabilística adaptativa inválida.'
+            );
+        }
+
         return scores;
+    }
+
+    /**
+     * Retorna a distribuição probabilística adaptativa utilizada
+     * na última geração.
+     */
+    getAdaptiveProbabilities(): Array<{ numero: number; probabilidade: number }> {
+        if (!this.probabilityLearning) {
+            throw new Error(
+                '[ProbabilityEngine] Conhecimento probabilístico adaptativo ainda não foi preparado.'
+            );
+        }
+
+        return this.probabilityLearning.probabilidadesAprendidas.map(
+            item => ({ ...item })
+        );
     }
 
     // ============================================
@@ -329,91 +371,53 @@ export class ProbabilityEngine extends BaseEngine {
         return this.context.probability;
     }
 
-    /**
-     * Obtém FrequencyAnalyzer com validação
-     */
-    private obterFrequency(): FrequencyAnalyzer {
-        if (!this.context) {
-            throw new Error(
-                '[ProbabilityEngine] StatisticsContext indisponível ao obter FrequencyAnalyzer.'
-            );
-        }
-
-        if (!this.context.frequency) {
-            throw new Error(
-                '[ProbabilityEngine] FrequencyAnalyzer não foi inicializado.'
-            );
-        }
-
-        return this.context.frequency;
-    }
 
     // ============================================
     // MÉTODOS DE CONFIGURAÇÃO
     // ============================================
 
     /**
-     * Atualiza os pesos do score
-     * 
-     * Nota: A soma dos pesos deve ser 1
+     * A ProbabilityEngine não utiliza mais pesos locais 60/40.
+     * A distribuição é fornecida pela EngineLearningBridge.
      */
-    setWeights(weights: Partial<typeof this.weights>): void {
-        const novosPesos = {
-            ...this.weights,
-            ...weights
-        };
-
-        // Valida soma dos pesos
-        const soma = Object.values(novosPesos).reduce((acc, val) => acc + val, 0);
-        if (Math.abs(soma - 1) > 0.001) {
-            throw new Error(
-                `[ProbabilityEngine] Soma dos pesos é ${soma.toFixed(3)}, esperado 1.`
-            );
-        }
-
-        this.weights = novosPesos;
+    setWeights(_weights: { probabilidade?: number; frequencia?: number }): void {
+        throw new Error(
+            '[ProbabilityEngine] Pesos locais 60/40 não são mais suportados. A distribuição probabilística é calibrada pelo cérebro adaptativo.'
+        );
     }
 
-    /**
-     * Obtém os pesos atuais
-     */
-    getWeights(): typeof this.weights {
-        return { ...this.weights };
+    getWeights(): { probabilidade: number; frequencia: number } {
+        return { probabilidade: 1, frequencia: 0 };
     }
 
-    /**
-     * Obtém a entropia atual da distribuição
-     */
     getEntropia(): number {
         if (!this.context || !this.context.probability) {
             throw new Error(
                 '[ProbabilityEngine] ProbabilityAnalyzer indisponível para obter entropia.'
             );
         }
+
         return this.context.probability.getEntropia();
     }
 
-    /**
-     * Obtém a variância atual da distribuição
-     */
     getVariancia(): number {
         if (!this.context || !this.context.probability) {
             throw new Error(
                 '[ProbabilityEngine] ProbabilityAnalyzer indisponível para obter variância.'
             );
         }
+
         return this.context.probability.getVariancia();
     }
 
-    /**
-     * Valida se os pesos são válidos
-     */
     validarPesos(): boolean {
-        const soma = Object.values(this.weights).reduce((acc, val) => acc + val, 0);
-        return Math.abs(soma - 1) < 0.001;
+        return true;
     }
 }
 
 // ============================================
 // SEÇÃO 5: EXPORTS
 // ============================================
+
+export default ProbabilityEngine;
+
