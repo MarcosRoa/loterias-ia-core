@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/engines/SmartRandomEngine.ts
-// VERSÃO: 2.1.0 (INTEGRAÇÃO ADAPTATIVA)
+// VERSÃO: 2.1.0 (INTEGRAÇÃO ADAPTATIVA)  07/09/2026
 // ============================================
 
 import { BaseEngine, EngineConfig, EngineExtras, EngineResult, JogoGerado } from './BaseEngine'; 
