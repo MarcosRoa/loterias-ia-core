@@ -1,8 +1,8 @@
 // ============================================
 // CAMINHO: src/ai/engines/HybridEngine.ts
-// DATA CRIAÇÃO: 2026-01-20
-// STATUS: ⏳ PENDENTE APROVAÇÃO
-// VERSÃO: 1.1.0 (VERSÃO REVISADA)
+// DATA CRIAÇÃO: 07/09/2026
+// STATUS: INTEGRAÇÃO ADAPTATIVA
+// VERSÃO: 1.2.0 (INTEGRAÇÃO ADAPTATIVA)
 // ============================================
 // 
 // SEÇÃO 1: IMPORTS
@@ -31,6 +31,7 @@ import { ProbabilityAnalyzer } from '../analysis/ProbabilityAnalyzer';
 import { PatternAnalyzer } from '../analysis/PatternAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
+import { EngineLearningBridge, HybridLearningContext } from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: HYBRID ENGINE
@@ -90,6 +91,7 @@ export class HybridEngine extends BaseEngine {
      * Quanto maior, mais penaliza números recentes
      */
     private dispersionPenaltyFactor: number = 1.0;
+    private hybridLearning!: HybridLearningContext;
 
     constructor(
         dados: number[][],
@@ -122,7 +124,21 @@ export class HybridEngine extends BaseEngine {
         // ============================================
         this.validarContexto();
         this.validarQuantidade(quantidade);
-        
+
+        const learningBridge = new EngineLearningBridge();
+        this.hybridLearning = learningBridge.prepararHibrida(
+            this.dados,
+            {
+                loteria: this.config.lotteryType,
+                maxNumero: this.config.maxNumero,
+                incluirZero: this.config.incluirZero,
+                quantidadeNumeros: this.config.numerosPadrao,
+                minTreino: 300,
+                passo: 1,
+                recentWindow: 20
+            }
+        );
+
         const dispersao = params.dispersao || 15;
         if (params.dispersionPenaltyFactor !== undefined) {
             this.dispersionPenaltyFactor = params.dispersionPenaltyFactor;
@@ -155,7 +171,8 @@ export class HybridEngine extends BaseEngine {
                 delay,
                 dispersion,
                 probability,
-                patterns
+                patterns,
+                this.obterPesosAdaptativos()
             );
             
             // Seleciona números usando a nova arquitetura
@@ -215,7 +232,13 @@ export class HybridEngine extends BaseEngine {
         delay: DelayAnalyzer,
         dispersion: DispersionAnalyzer,
         probability: ProbabilityAnalyzer,
-        patterns: PatternAnalyzer
+        patterns: PatternAnalyzer,
+        pesos: {
+            frequencia: number;
+            atraso: number;
+            probabilidade: number;
+            padrao: number;
+        }
     ): ScoreItem[] {
         const min = this.config.incluirZero ? 0 : 1;
         const max = this.config.maxNumero;
@@ -246,10 +269,10 @@ export class HybridEngine extends BaseEngine {
 
             // Aplica pesos (soma = 1)
             let score = (
-                freqScore * this.weights.frequencia +
-                delayScore * this.weights.atraso +
-                probScore * this.weights.probabilidade +
-                padraoScore * this.weights.padrao
+                freqScore * pesos.frequencia +
+                delayScore * pesos.atraso +
+                probScore * pesos.probabilidade +
+                padraoScore * pesos.padrao
             );
 
             // ============================================
@@ -273,6 +296,60 @@ export class HybridEngine extends BaseEngine {
     }
 
     // ============================================
+    private obterPesosAdaptativos(): {
+        frequencia: number;
+        atraso: number;
+        probabilidade: number;
+        padrao: number;
+    } {
+        if (!this.hybridLearning) {
+            throw new Error(
+                '[HybridEngine] Conhecimento adaptativo não foi preparado antes do cálculo de scores.'
+            );
+        }
+
+        const aprendidos =
+            this.hybridLearning.conhecimento.pesosAdaptativos;
+        const fatorAtraso = (
+            aprendidos.atraso +
+            aprendidos.atrasoRelativo +
+            aprendidos.regularidadeAtraso
+        ) / 3;
+
+        const fatorProbabilidade = (
+            aprendidos.probabilidade +
+            aprendidos.taxaRecente +
+            aprendidos.intensidadeRecente +
+            aprendidos.persistenciaRecente +
+            aprendidos.distanciaRecente
+        ) / 5;
+
+        const pesosBrutos = {
+            frequencia: this.weights.frequencia * aprendidos.frequencia,
+            atraso: this.weights.atraso * fatorAtraso,
+            probabilidade: this.weights.probabilidade * fatorProbabilidade,
+            padrao: this.weights.padrao * aprendidos.suportePadrao
+        };
+
+        const soma = Object.values(pesosBrutos).reduce(
+            (total, valor) => total + valor,
+            0
+        );
+
+        if (!Number.isFinite(soma) || soma <= 0) {
+            throw new Error(
+                `[HybridEngine] Não foi possível normalizar os pesos adaptativos. Soma=${soma}.`
+            );
+        }
+
+        return {
+            frequencia: pesosBrutos.frequencia / soma,
+            atraso: pesosBrutos.atraso / soma,
+            probabilidade: pesosBrutos.probabilidade / soma,
+            padrao: pesosBrutos.padrao / soma
+        };
+    }
+
     // MÉTODOS DE VALIDAÇÃO
     // ============================================
 
