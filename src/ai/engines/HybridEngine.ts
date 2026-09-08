@@ -1,6 +1,6 @@
 // ============================================
 // CAMINHO: src/ai/engines/HybridEngine.ts
-// DATA CRIAÇÃO: 07/09/2026
+// DATA CRIAÇÃO: 07/09/2026 
 // STATUS: INTEGRAÇÃO ADAPTATIVA
 // VERSÃO: 1.2.0 (INTEGRAÇÃO ADAPTATIVA)
 // ============================================
