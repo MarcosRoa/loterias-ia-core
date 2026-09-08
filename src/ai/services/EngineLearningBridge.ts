@@ -43,6 +43,7 @@ import { AdaptiveWeights } from './AdaptiveWeights';
 import { AdaptiveBrain } from './AdaptiveBrain';
 import type { PredictiveScoringWeights } from './PredictiveScoring';
 import { ProbabilityAnalyzer } from '../analysis/ProbabilityAnalyzer';
+import { SuperSeteLearning } from './SuperSeteLearning';
 
 // ============================================================
 // CONFIGURAÇÃO
@@ -114,13 +115,21 @@ export interface SmartRandomLearningContext {
         score: number;
     }>;
 }
-
+export interface SuperSeteLearningContext {
+    tipo: 'superSete';
+    conhecimento: LearnedEngineKnowledge;
+    scoresPorPosicao: Array<Array<{
+        numero: number;
+        score: number;
+    }>>;
+}
 export type EngineLearningContext =
     | ProbabilityLearningContext
     | SpecialistLearningContext
     | HybridLearningContext
     | StatisticalLearningContext
-    | SmartRandomLearningContext;
+    | SmartRandomLearningContext
+    | SuperSeteLearningContext;
 
 // ============================================================
 // PONTE
@@ -399,6 +408,97 @@ export class EngineLearningBridge {
                 numero: item.numero,
                 score: item.score
             }))
+        };
+    }
+    // ========================================================
+    // SUPER SETE
+    // ========================================================
+
+    prepararSuperSete(
+        dados: number[][],
+        config: EngineLearningConfig
+    ): SuperSeteLearningContext {
+
+        this.validarDados(dados);
+
+        if (config.loteria !== 'supersete') {
+            throw new Error(
+                `[EngineLearningBridge] prepararSuperSete recebeu uma loteria inválida: "${config.loteria}".`
+            );
+        }
+
+        const conhecimento =
+            this.obterConhecimento(config);
+
+        const learning = new SuperSeteLearning({
+            maxNumero: config.maxNumero,
+            incluirZero: config.incluirZero,
+            topPatternsCount:
+                config.topPatternsCount ?? 10,
+            numbersPerPattern:
+                config.numbersPerPattern ?? 5,
+            recentWindow:
+                config.recentWindow ?? 20
+        });
+
+        const resultado =
+            learning.calcularScores(
+                dados,
+                conhecimento.pesosAdaptativos
+            );
+
+        if (
+            !resultado ||
+            !Array.isArray(resultado.scoresPorPosicao)
+        ) {
+            throw new Error(
+                '[EngineLearningBridge] SuperSeteLearning não retornou scores posicionais válidos.'
+            );
+        }
+
+        if (resultado.scoresPorPosicao.length !== 7) {
+            throw new Error(
+                `[EngineLearningBridge] Super Sete deve retornar exatamente 7 posições. Recebido: ${resultado.scoresPorPosicao.length}.`
+            );
+        }
+
+        for (let posicao = 0; posicao < 7; posicao++) {
+
+            const scores =
+                resultado.scoresPorPosicao[posicao];
+
+            if (!Array.isArray(scores) || scores.length !== 10) {
+                throw new Error(
+                    `[EngineLearningBridge] Posição ${posicao + 1} do Super Sete deve conter exatamente 10 dígitos.`
+                );
+            }
+
+            for (const item of scores) {
+
+                if (
+                    !Number.isInteger(item.numero) ||
+                    item.numero < 0 ||
+                    item.numero > 9 ||
+                    !Number.isFinite(item.score) ||
+                    item.score < 0
+                ) {
+                    throw new Error(
+                        `[EngineLearningBridge] Score posicional inválido no Super Sete: posição=${posicao + 1}, número=${item.numero}, score=${item.score}.`
+                    );
+                }
+            }
+        }
+
+        return {
+            tipo: 'superSete',
+            conhecimento,
+            scoresPorPosicao:
+                resultado.scoresPorPosicao.map(scores =>
+                    scores.map(item => ({
+                        numero: item.numero,
+                        score: item.score
+                    }))
+                )
         };
     }
 
