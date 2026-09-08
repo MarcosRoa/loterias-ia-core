@@ -31,7 +31,11 @@ import { ProbabilityAnalyzer } from '../analysis/ProbabilityAnalyzer';
 import { PatternAnalyzer } from '../analysis/PatternAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
-import { EngineLearningBridge, HybridLearningContext } from '../services/EngineLearningBridge';
+import {
+    EngineLearningBridge,
+    HybridLearningContext,
+    SuperSeteLearningContext
+} from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: HYBRID ENGINE
@@ -92,6 +96,7 @@ export class HybridEngine extends BaseEngine {
      */
     private dispersionPenaltyFactor: number = 1.0;
     private hybridLearning!: HybridLearningContext;
+    private superSeteLearning!: SuperSeteLearningContext;
 
     constructor(
         dados: number[][],
@@ -138,6 +143,89 @@ export class HybridEngine extends BaseEngine {
                 recentWindow: 20
             }
         );
+        // ========================================================
+        // SUPER SETE — FLUXO POSICIONAL EXCLUSIVO
+        // ========================================================
+
+        if (
+            this.config.isSuperSete ||
+            this.config.lotteryType === 'supersete'
+        ) {
+            this.superSeteLearning =
+                learningBridge.prepararSuperSete(
+                    this.dados,
+                    {
+                        loteria: this.config.lotteryType,
+                        maxNumero: this.config.maxNumero,
+                        incluirZero: this.config.incluirZero,
+                        quantidadeNumeros: 7,
+                        minTreino: 300,
+                        passo: 1,
+                        topPatternsCount: 10,
+                        numbersPerPattern: 5,
+                        recentWindow: 20
+                    }
+                );
+
+            const seedsSuperSete =
+                this.gerarSeeds(quantidade, seed);
+
+            const jogosSuperSete: JogoGerado[] = [];
+            const jogosGeradosSuperSete: number[][] = [];
+
+            for (let i = 0; i < quantidade; i++) {
+
+                const numeros =
+                    this.selecionarSuperSete(
+                        this.superSeteLearning.scoresPorPosicao,
+                        seedsSuperSete[i],
+                        jogosGeradosSuperSete
+                    );
+
+                const jogo =
+                    this.criarJogo(
+                        numeros,
+                        seedsSuperSete[i],
+                        [
+                            '🧠 Aprendizado adaptativo posicional',
+                            '🎯 Cada coluna analisada separadamente',
+                            '📊 7 posições × 10 dígitos'
+                        ]
+                    );
+
+                // O GameExtras ainda gera uma coluna aleatória.
+                // Aqui substituímos explicitamente pelo resultado
+                // aprendido, sem alterar o GameExtras ou BaseEngine.
+                jogo.colunas =
+                    numeros.map(numero => [numero]);
+
+                jogosSuperSete.push(jogo);
+                jogosGeradosSuperSete.push(numeros);
+            }
+
+            const confianca =
+                this.confidenceCalc.calcularCompleta(
+                    this.dados,
+                    [
+                        'frequencia',
+                        'atraso',
+                        'dispersao',
+                        'probabilidade',
+                        'padroes'
+                    ]
+                );
+
+            return {
+                games: jogosSuperSete,
+                confidence: confianca.confianca,
+                engineName: this.getNome(),
+                explanation: [
+                    `🧠 ${this.dados.length} concursos analisados`,
+                    '🎯 Aprendizado posicional ativo',
+                    `📊 ${confianca.fatores?.qualidadeEstatistica?.toFixed(0) || 0}% qualidade estatística`
+                ]
+            };
+        }
 
         const dispersao = params.dispersao || 15;
         if (params.dispersionPenaltyFactor !== undefined) {
@@ -348,6 +436,165 @@ export class HybridEngine extends BaseEngine {
             probabilidade: pesosBrutos.probabilidade / soma,
             padrao: pesosBrutos.padrao / soma
         };
+    }
+    // ========================================================
+    // SELEÇÃO POSICIONAL — SUPER SETE
+    // ========================================================
+
+    private selecionarSuperSete(
+        scoresPorPosicao: Array<
+            Array<{
+                numero: number;
+                score: number;
+            }>
+        >,
+        seed: number,
+        jogosGerados: number[][]
+    ): number[] {
+
+        if (!Array.isArray(scoresPorPosicao)) {
+            throw new Error(
+                '[HybridEngine] Scores posicionais do Super Sete não foram fornecidos.'
+            );
+        }
+
+        if (scoresPorPosicao.length !== 7) {
+            throw new Error(
+                `[HybridEngine] Super Sete deve possuir 7 posições. Recebido: ${scoresPorPosicao.length}.`
+            );
+        }
+
+        const MAX_TENTATIVAS = 1000;
+
+        for (let tentativa = 0; tentativa < MAX_TENTATIVAS; tentativa++) {
+
+            const numeros: number[] = [];
+
+            for (let posicao = 0; posicao < 7; posicao++) {
+
+                const scores =
+                    scoresPorPosicao[posicao];
+
+                if (!Array.isArray(scores) || scores.length !== 10) {
+                    throw new Error(
+                        `[HybridEngine] Scores inválidos na posição ${posicao + 1} do Super Sete.`
+                    );
+                }
+
+                let soma = 0;
+
+                for (const item of scores) {
+
+                    if (
+                        !item ||
+                        !Number.isInteger(item.numero) ||
+                        item.numero < 0 ||
+                        item.numero > 9 ||
+                        !Number.isFinite(item.score) ||
+                        item.score < 0
+                    ) {
+                        throw new Error(
+                            `[HybridEngine] Score inválido na posição ${posicao + 1}: ` +
+                            `numero=${item?.numero}, score=${item?.score}.`
+                        );
+                    }
+
+                    soma += item.score;
+                }
+
+                if (!Number.isFinite(soma) || soma <= 0) {
+                    throw new Error(
+                        `[HybridEngine] Soma dos scores da posição ${posicao + 1} é inválida: ${soma}.`
+                    );
+                }
+
+                const aleatorio =
+                    this.random.next(
+                        seed +
+                        tentativa * 100 +
+                        posicao
+                    );
+
+                const alvo =
+                    aleatorio * soma;
+
+                let acumulado = 0;
+                let selecionado: number | null = null;
+
+                for (const item of scores) {
+
+                    acumulado += item.score;
+
+                    if (alvo < acumulado) {
+                        selecionado = item.numero;
+                        break;
+                    }
+                }
+
+                if (selecionado === null) {
+                    throw new Error(
+                        `[HybridEngine] Não foi possível selecionar o dígito da posição ${posicao + 1}.`
+                    );
+                }
+
+                numeros.push(selecionado);
+            }
+
+            // ----------------------------------------------------
+            // Não permitir jogo exatamente igual.
+            // ----------------------------------------------------
+
+            const duplicado =
+                jogosGerados.some(jogo =>
+                    jogo.length === 7 &&
+                    jogo.every(
+                        (numero, posicao) =>
+                            numero === numeros[posicao]
+                    )
+                );
+
+            if (duplicado) {
+                continue;
+            }
+
+            // ----------------------------------------------------
+            // Controle de proximidade.
+            //
+            // Até 5 posições iguais é permitido.
+            // 6 ou 7 posições iguais caracteriza jogo
+            // excessivamente semelhante.
+            // ----------------------------------------------------
+
+            const excessivamenteSemelhante =
+                jogosGerados.some(jogo => {
+
+                    if (jogo.length !== 7) {
+                        throw new Error(
+                            '[HybridEngine] Histórico de jogos do Super Sete contém jogo com estrutura inválida.'
+                        );
+                    }
+
+                    let iguais = 0;
+
+                    for (let posicao = 0; posicao < 7; posicao++) {
+                        if (jogo[posicao] === numeros[posicao]) {
+                            iguais++;
+                        }
+                    }
+
+                    return iguais >= 6;
+                });
+
+            if (excessivamenteSemelhante) {
+                continue;
+            }
+
+            return numeros;
+        }
+
+        throw new Error(
+            `[HybridEngine] Não foi possível gerar um jogo de Super Sete suficientemente diversificado após ${MAX_TENTATIVAS} tentativas.`
+        );
     }
 
     // MÉTODOS DE VALIDAÇÃO
