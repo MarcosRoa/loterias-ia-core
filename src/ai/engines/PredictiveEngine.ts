@@ -33,6 +33,10 @@ import {
     AdaptiveBrainConfig
 } from '../services/AdaptiveBrain';
 import { AdaptiveWeights } from '../services/AdaptiveWeights';
+import {
+    EngineLearningBridge,
+    SuperSeteLearningContext
+} from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: PREDICTIVE ENGINE
@@ -91,6 +95,7 @@ export class PredictiveEngine extends BaseEngine {
      * A geração de jogos continua pertencendo ao Engine/BaseEngine.
      */
     private adaptiveBrain: AdaptiveBrain | null = null;
+    private superSeteLearning!: SuperSeteLearningContext;
 
     /**
      * Número mínimo de concursos para operar
@@ -163,6 +168,91 @@ export class PredictiveEngine extends BaseEngine {
 
         if (params.numbersPerPattern !== undefined) {
             this.setNumbersPerPattern(params.numbersPerPattern);
+        }
+
+        // ============================================
+        // SUPER SETE — FLUXO POSICIONAL EXCLUSIVO
+        // ============================================
+        if (
+            this.config.isSuperSete ||
+            this.config.lotteryType === 'supersete'
+        ) {
+            const learningBridge = new EngineLearningBridge();
+
+            this.superSeteLearning =
+                learningBridge.prepararSuperSete(
+                    this.dados,
+                    {
+                        // EngineConfig usa o identificador de runtime "superSete".
+                        // O EngineLearningBridge/AdaptiveWeights usa a chave histórica "supersete".
+                        // Mantemos o contrato da engine e adaptamos apenas na fronteira da ponte.
+                        loteria: 'supersete',
+                        maxNumero: this.config.maxNumero,
+                        incluirZero: this.config.incluirZero,
+                        quantidadeNumeros: 7,
+                        minTreino: 300,
+                        passo: 1,
+                        topPatternsCount:
+                            params.topPatternsCount ?? this.topPatternsCount,
+                        numbersPerPattern:
+                            params.numbersPerPattern ?? this.numbersPerPattern,
+                        recentWindow:
+                            params.recentWindow ?? 20
+                    }
+                );
+
+            const jogos: JogoGerado[] = [];
+            const jogosGerados: number[][] = [];
+
+            for (let i = 0; i < quantidade; i++) {
+                const numeros =
+                    this.selecionarSuperSete(
+                        this.superSeteLearning.scoresPorPosicao,
+                        seed + i,
+                        jogosGerados
+                    );
+
+                const jogo = this.criarJogo(
+                    numeros,
+                    seed + i,
+                    [
+                        '🔮 Ranking preditivo adaptativo posicional',
+                        '📈 Cada coluna analisada separadamente',
+                        '📊 Super Sete: 7 posições × 10 dígitos'
+                    ]
+                );
+
+                jogo.colunas =
+                    numeros.map(numero => [numero]);
+
+                jogos.push(jogo);
+                jogosGerados.push(numeros);
+            }
+
+            const confianca =
+                this.confidenceCalc.calcularCompleta(
+                    this.dados,
+                    [
+                        'frequencia',
+                        'atraso',
+                        'padroes'
+                    ]
+                );
+
+            return {
+                games: jogos,
+                confidence: Math.min(
+                    confianca.confianca + 5,
+                    85
+                ),
+                engineName: this.getNome(),
+                explanation: [
+                    `🔮 ${this.dados.length} concursos analisados`,
+                    `🎯 Confiança: ${(confianca.confianca + 5).toFixed(0)}%`,
+                    '🧠 Ranking calculado com aprendizado adaptativo posicional',
+                    '📈 Super Sete: 7 posições × 10 dígitos'
+                ]
+            };
         }
 
         // ============================================
@@ -323,6 +413,106 @@ export class PredictiveEngine extends BaseEngine {
             numero: item.numero,
             score: item.score
         }));
+    }
+
+    // ============================================
+    // SUPER SETE — SELEÇÃO POSICIONAL
+    // ============================================
+
+    private selecionarSuperSete(
+        scoresPorPosicao: Array<Array<{
+            numero: number;
+            score: number;
+        }>>,
+        seed: number,
+        jogosGerados: number[][]
+    ): number[] {
+        if (scoresPorPosicao.length !== 7) {
+            throw new Error(
+                `[PredictiveEngine] Super Sete deve possuir exatamente 7 posições. Recebido: ${scoresPorPosicao.length}.`
+            );
+        }
+
+        const numeros: number[] = [];
+
+        for (let posicao = 0; posicao < 7; posicao++) {
+            const scores = scoresPorPosicao[posicao];
+
+            if (!Array.isArray(scores) || scores.length !== 10) {
+                throw new Error(
+                    `[PredictiveEngine] Posição ${posicao + 1} deve possuir exatamente 10 dígitos.`
+                );
+            }
+
+            const total = scores.reduce((soma, item) => {
+                if (
+                    !Number.isInteger(item.numero) ||
+                    item.numero < 0 ||
+                    item.numero > 9 ||
+                    !Number.isFinite(item.score) ||
+                    item.score < 0
+                ) {
+                    throw new Error(
+                        `[PredictiveEngine] Score inválido: posição=${posicao + 1}, número=${item.numero}, score=${item.score}.`
+                    );
+                }
+
+                return soma + item.score;
+            }, 0);
+
+            if (!Number.isFinite(total) || total <= 0) {
+                throw new Error(
+                    `[PredictiveEngine] Soma dos scores inválida na posição ${posicao + 1}: ${total}.`
+                );
+            }
+
+            const rand =
+                this.random.next(seed + posicao * 997);
+
+            let acumulado = 0;
+            let selecionado: number | null = null;
+
+            for (const item of scores) {
+                acumulado += item.score / total;
+
+                if (rand <= acumulado) {
+                    selecionado = item.numero;
+                    break;
+                }
+            }
+
+            if (selecionado === null) {
+                throw new Error(
+                    `[PredictiveEngine] Não foi possível selecionar um dígito na posição ${posicao + 1}.`
+                );
+            }
+
+            numeros.push(selecionado);
+        }
+
+        for (const anterior of jogosGerados) {
+            if (anterior.length !== 7) {
+                throw new Error(
+                    '[PredictiveEngine] Jogo anterior do Super Sete possui estrutura inválida.'
+                );
+            }
+
+            let iguais = 0;
+
+            for (let posicao = 0; posicao < 7; posicao++) {
+                if (numeros[posicao] === anterior[posicao]) {
+                    iguais++;
+                }
+            }
+
+            if (iguais >= 6) {
+                throw new Error(
+                    '[PredictiveEngine] Não foi possível manter a diversidade posicional do Super Sete.'
+                );
+            }
+        }
+
+        return numeros;
     }
 
     // ============================================
