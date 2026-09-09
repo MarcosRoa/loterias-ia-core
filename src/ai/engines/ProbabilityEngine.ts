@@ -1,6 +1,9 @@
 // ============================================
 // CAMINHO: src/ai/engines/ProbabilityEngine.ts
 // DATA CRIAÇÃO: 07/09/2026
+// ============================================
+// CAMINHO: src/ai/engines/ProbabilityEngine.ts
+// DATA CRIAÇÃO: 07/09/2026
 // STATUS: ⏳ PENDENTE APROVAÇÃO
 // VERSÃO: 2.1.1 (INTEGRAÇÃO COM ENGINE LEARNING BRIDGE)
 // ============================================
@@ -27,7 +30,11 @@ import {
 import { ProbabilityAnalyzer } from '../analysis/ProbabilityAnalyzer';
 import { ConfidenceCalculator } from '../evaluation/ConfidenceCalculator';
 import { ScoreItem } from '../types';
-import { EngineLearningBridge, ProbabilityLearningContext } from '../services/EngineLearningBridge';
+import {
+    EngineLearningBridge,
+    ProbabilityLearningContext,
+    SuperSeteLearningContext
+} from '../services/EngineLearningBridge';
 
 // ============================================
 // SEÇÃO 2: PROBABILITY ENGINE
@@ -76,6 +83,7 @@ export class ProbabilityEngine extends BaseEngine {
      * A antiga combinação fixa 60/40 foi removida.
      */
     private probabilityLearning: ProbabilityLearningContext | null = null;
+    private superSeteLearning: SuperSeteLearningContext | null = null;
 
 
     constructor(
@@ -121,27 +129,53 @@ export class ProbabilityEngine extends BaseEngine {
         // OBTÉM ANALISADORES COM VALIDAÇÃO
         // ============================================
         const probability = this.obterProbability();
+
         // ============================================
         // PREPARA CONHECIMENTO ADAPTATIVO CENTRAL
         // ============================================
         const learningBridge = new EngineLearningBridge();
-        this.probabilityLearning = learningBridge.prepararProbabilistica(
-            this.dados,
-            {
-                loteria: this.config.lotteryType,
-                maxNumero: this.config.maxNumero,
-                incluirZero: this.config.incluirZero,
-                quantidadeNumeros: this.config.numerosPadrao,
-                minTreino: 300,
-                passo: 1,
-                recentWindow: 20
-            }
-        );
+
+        const isSuperSete =
+            this.config.isSuperSete ||
+            this.config.lotteryType === 'supersete';
 
         // ============================================
-        // CALCULA SCORES PROBABILÍSTICOS ADAPTATIVOS
+        // SUPER SETE — FLUXO POSICIONAL EXCLUSIVO
         // ============================================
-        const scores = this.calcularScores();
+        if (isSuperSete) {
+            this.superSeteLearning =
+                learningBridge.prepararSuperSete(
+                    this.dados,
+                    {
+                        loteria: this.config.lotteryType,
+                        maxNumero: this.config.maxNumero,
+                        incluirZero: this.config.incluirZero,
+                        quantidadeNumeros: 7,
+                        minTreino: 300,
+                        passo: 1,
+                        topPatternsCount: 10,
+                        numbersPerPattern: 5,
+                        recentWindow: 20
+                    }
+                );
+        } else {
+            // ============================================
+            // DEMAIS LOTERIAS — FLUXO PROBABILÍSTICO ATUAL
+            // ============================================
+            this.probabilityLearning =
+                learningBridge.prepararProbabilistica(
+                    this.dados,
+                    {
+                        loteria: this.config.lotteryType,
+                        maxNumero: this.config.maxNumero,
+                        incluirZero: this.config.incluirZero,
+                        quantidadeNumeros: this.config.numerosPadrao,
+                        minTreino: 300,
+                        passo: 1,
+                        recentWindow: 20
+                    }
+                );
+        }
 
         // ============================================
         // GERA SEEDS DETERMINÍSTICAS
@@ -155,20 +189,52 @@ export class ProbabilityEngine extends BaseEngine {
         let jogosGerados: number[][] = [];
 
         for (let i = 0; i < quantidade; i++) {
-            // Seleciona números usando a nova arquitetura
-            const numeros = this.selecionarNumeros(
-                scores,
-                this.config.numerosPadrao,
-                seeds[i],
-                jogosGerados
-            );
+            let numeros: number[];
+
+            if (isSuperSete) {
+                if (!this.superSeteLearning) {
+                    throw new Error(
+                        '[ProbabilityEngine] Conhecimento posicional do Super Sete não foi preparado.'
+                    );
+                }
+
+                numeros = this.selecionarSuperSete(
+                    this.superSeteLearning.scoresPorPosicao,
+                    seeds[i],
+                    jogosGerados
+                );
+            } else {
+                const scores = this.calcularScores();
+
+                numeros = this.selecionarNumeros(
+                    scores,
+                    this.config.numerosPadrao,
+                    seeds[i],
+                    jogosGerados
+                );
+            }
 
             // Cria o jogo
-            const jogo = this.criarJogo(numeros, seeds[i], [
-                '📈 Distribuição probabilística adaptativa',
-                '📊 Entropia e variância calculadas'
-            ]);
-            
+            const jogo = this.criarJogo(
+                numeros,
+                seeds[i],
+                isSuperSete
+                    ? [
+                        '🧠 Aprendizado adaptativo posicional',
+                        '🎯 Cada coluna analisada separadamente',
+                        '📊 7 posições × 10 dígitos'
+                    ]
+                    : [
+                        '📈 Distribuição probabilística adaptativa',
+                        '📊 Entropia e variância calculadas'
+                    ]
+            );
+
+            if (isSuperSete) {
+                jogo.colunas =
+                    numeros.map(numero => [numero]);
+            }
+
             jogos.push(jogo);
             jogosGerados.push(numeros);
         }
@@ -261,6 +327,153 @@ export class ProbabilityEngine extends BaseEngine {
         }
 
         return scores;
+    }
+
+    /**
+     * Seleção posicional exclusiva do Super Sete.
+     *
+     * Cada uma das 7 posições possui sua própria distribuição
+     * de scores. A seleção é feita por roleta ponderada sem
+     * ordenar os dígitos ao final.
+     *
+     * Repetições entre posições são permitidas.
+     * Jogos idênticos e excessivamente semelhantes são rejeitados.
+     */
+    private selecionarSuperSete(
+        scoresPorPosicao: Array<
+            Array<{
+                numero: number;
+                score: number;
+            }>
+        >,
+        seed: number,
+        jogosGerados: number[][]
+    ): number[] {
+
+        if (!Array.isArray(scoresPorPosicao)) {
+            throw new Error(
+                '[ProbabilityEngine] Scores posicionais do Super Sete não foram fornecidos.'
+            );
+        }
+
+        if (scoresPorPosicao.length !== 7) {
+            throw new Error(
+                `[ProbabilityEngine] Super Sete deve possuir 7 posições. Recebido: ${scoresPorPosicao.length}.`
+            );
+        }
+
+        const MAX_TENTATIVAS = 1000;
+
+        for (let tentativa = 0; tentativa < MAX_TENTATIVAS; tentativa++) {
+            const numeros: number[] = [];
+
+            for (let posicao = 0; posicao < 7; posicao++) {
+                const scores = scoresPorPosicao[posicao];
+
+                if (!Array.isArray(scores) || scores.length !== 10) {
+                    throw new Error(
+                        `[ProbabilityEngine] Scores inválidos na posição ${posicao + 1} do Super Sete.`
+                    );
+                }
+
+                let soma = 0;
+
+                for (const item of scores) {
+                    if (
+                        !item ||
+                        !Number.isInteger(item.numero) ||
+                        item.numero < 0 ||
+                        item.numero > 9 ||
+                        !Number.isFinite(item.score) ||
+                        item.score < 0
+                    ) {
+                        throw new Error(
+                            `[ProbabilityEngine] Score inválido na posição ${posicao + 1}: ` +
+                            `numero=${item?.numero}, score=${item?.score}.`
+                        );
+                    }
+
+                    soma += item.score;
+                }
+
+                if (!Number.isFinite(soma) || soma <= 0) {
+                    throw new Error(
+                        `[ProbabilityEngine] Soma dos scores da posição ${posicao + 1} é inválida: ${soma}.`
+                    );
+                }
+
+                const aleatorio =
+                    this.random.next(
+                        seed +
+                        tentativa * 100 +
+                        posicao
+                    );
+
+                const alvo = aleatorio * soma;
+
+                let acumulado = 0;
+                let selecionado: number | null = null;
+
+                for (const item of scores) {
+                    acumulado += item.score;
+
+                    if (alvo < acumulado) {
+                        selecionado = item.numero;
+                        break;
+                    }
+                }
+
+                if (selecionado === null) {
+                    throw new Error(
+                        `[ProbabilityEngine] Não foi possível selecionar o dígito da posição ${posicao + 1}.`
+                    );
+                }
+
+                numeros.push(selecionado);
+            }
+
+            const duplicado =
+                jogosGerados.some(jogo =>
+                    jogo.length === 7 &&
+                    jogo.every(
+                        (numero, posicao) =>
+                            numero === numeros[posicao]
+                    )
+                );
+
+            if (duplicado) {
+                continue;
+            }
+
+            const excessivamenteSemelhante =
+                jogosGerados.some(jogo => {
+                    if (jogo.length !== 7) {
+                        throw new Error(
+                            '[ProbabilityEngine] Histórico de jogos do Super Sete contém jogo com estrutura inválida.'
+                        );
+                    }
+
+                    let iguais = 0;
+
+                    for (let posicao = 0; posicao < 7; posicao++) {
+                        if (jogo[posicao] === numeros[posicao]) {
+                            iguais++;
+                        }
+                    }
+
+                    return iguais >= 6;
+                });
+
+            if (excessivamenteSemelhante) {
+                continue;
+            }
+
+            return numeros;
+        }
+
+        throw new Error(
+            `[ProbabilityEngine] Não foi possível gerar um jogo de Super Sete suficientemente diversificado após ${MAX_TENTATIVAS} tentativas.`
+        );
     }
 
     /**
