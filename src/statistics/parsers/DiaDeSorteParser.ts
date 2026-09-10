@@ -1,7 +1,7 @@
 // ============================================
 // CAMINHO: src/statistics/parsers/DiaDeSorteParser.ts
 // ============================================
-// PARSER ESPECÍFICO PARA DIA DE SORTE 03/09/2026
+// PARSER ESPECÍFICO PARA DIA DE SORTE 10/09/2026
 // ============================================
 
 import { BaseParser, ParseResult } from './BaseParser';
@@ -115,17 +115,34 @@ export class DiaDeSorteParser extends BaseParser {
                 }
             }
 
-            if (numeros.length >= 7) {
-                const numerosOrdenados = numeros
-                    .slice(0, 7)
-                    .sort((a, b) => a - b);
-
-                concursos.push(concurso);
-                dados.push(numerosOrdenados);
-                datas.push(data);
-
-                dadosExtras.push(mesSorte);
+            if (numeros.length !== 7) {
+                throw new Error(
+                    `DiaDeSorteParser: quantidade inválida de números na linha do concurso ${concurso}. ` +
+                    `Esperado: 7. Encontrado: ${numeros.length}.`
+                );
             }
+
+            if (new Set(numeros).size !== 7) {
+                throw new Error(
+                    `DiaDeSorteParser: números repetidos na linha do concurso ${concurso}.`
+                );
+            }
+
+            if (mesSorte === null) {
+                throw new Error(
+                    `DiaDeSorteParser: Mês da Sorte inválido ou ausente no concurso ${concurso}. ` +
+                    `Valor encontrado: "${mesValor}".`
+                );
+            }
+
+            const numerosOrdenados = numeros
+                .slice()
+                .sort((a, b) => a - b);
+
+            concursos.push(concurso);
+            dados.push(numerosOrdenados);
+            datas.push(data);
+            dadosExtras.push(mesSorte);
         }
 
         return {
