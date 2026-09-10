@@ -107,18 +107,18 @@
   },
   "milionaria": {
     "pesos": {
-      "frequencia": 1.2973689370544408,
-      "tendenciaFrequencia": 1.1804595166814198,
-      "estabilidadeFrequencia": 0.9697199694553275,
-      "atraso": 1.1084579574171742,
-      "atrasoRelativo": 1.0934148998040394,
-      "regularidadeAtraso": 0.5276093594123913,
-      "taxaRecente": 0.8834745410032471,
-      "intensidadeRecente": 0.8834745410032471,
-      "persistenciaRecente": 0.8834745410032471,
-      "distanciaRecente": 1.054185708898115,
-      "probabilidade": 1.2872070777488487,
-      "suportePadrao": 0.8311529505185027
+      "frequencia": 1.0089138103464277,
+      "tendenciaFrequencia": 1.0063854695712162,
+      "estabilidadeFrequencia": 0.9871166047556099,
+      "atraso": 0.9844352984814897,
+      "atrasoRelativo": 0.9844352984814897,
+      "regularidadeAtraso": 0.9946010780959642,
+      "taxaRecente": 1.0139667118598095,
+      "intensidadeRecente": 1.0139667118598095,
+      "persistenciaRecente": 1.0139667118598095,
+      "distanciaRecente": 0.9860891906879796,
+      "probabilidade": 1.009862599643614,
+      "suportePadrao": 0.9962605143567803
     }
   },
   "diadesorte": {
